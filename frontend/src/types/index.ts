@@ -34,11 +34,13 @@ export interface Persona {
   nac_anio: number | null;
   nac_tipo: FechaTipo;
   nac_lugar: Lugar | null;
+  nac_lugar_id?: number | null;
   def_dia: number | null;
   def_mes: number | null;
   def_anio: number | null;
   def_tipo: FechaTipo;
   def_lugar: Lugar | null;
+  def_lugar_id?: number | null;
   historia: string;
   foto_ruta: string | null;
 }

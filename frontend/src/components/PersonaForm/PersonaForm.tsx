@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import type { Persona } from '../../types';
+import type { Lugar } from '../../types';
+import LugarInput from '../LugarInput/LugarInput';
 
 interface Props {
   initial?: Partial<Persona>;
@@ -9,6 +11,9 @@ interface Props {
 }
 
 export default function PersonaForm({ initial = {}, onSave, onCancel, compact = false }: Props) {
+  const [nacLugar, setNacLugar] = useState<Lugar | null>(initial.nac_lugar ?? null);
+  const [defLugar, setDefLugar] = useState<Lugar | null>(initial.def_lugar ?? null);
+
   const [form, setForm] = useState({
     nombre: initial.nombre ?? '',
     apellido: initial.apellido ?? '',
@@ -33,6 +38,8 @@ export default function PersonaForm({ initial = {}, onSave, onCancel, compact = 
       nac_mes: form.nac_mes ? Number(form.nac_mes) : null,
       nac_tipo: form.nac_tipo as any,
       historia: compact ? undefined : form.historia,
+      nac_lugar_id: nacLugar?.id ?? null,
+      def_lugar_id: defLugar?.id ?? null,
     });
   }
 
@@ -78,6 +85,14 @@ export default function PersonaForm({ initial = {}, onSave, onCancel, compact = 
           <div style={rowStyle}>
             <label>Historia</label>
             <textarea rows={6} value={form.historia} onChange={e => set('historia', e.target.value)} style={{ ...inputStyle, resize: 'vertical' }} />
+          </div>
+          <div style={rowStyle}>
+            <label>Lugar de nacimiento</label>
+            <LugarInput value={nacLugar} onChange={setNacLugar} />
+          </div>
+          <div style={rowStyle}>
+            <label>Lugar de defunción</label>
+            <LugarInput value={defLugar} onChange={setDefLugar} placeholder="Ciudad, provincia, país..." />
           </div>
         </>
       )}
