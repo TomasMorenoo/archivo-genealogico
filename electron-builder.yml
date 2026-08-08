@@ -28,3 +28,4 @@ publish:
   provider: github
   owner: TomasMorenoo
   repo: archivo-genealogico
+  releaseType: release
