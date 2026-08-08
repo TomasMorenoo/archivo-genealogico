@@ -8,13 +8,12 @@ const electron_store_1 = __importDefault(require("electron-store"));
 const path_1 = __importDefault(require("path"));
 const store = new electron_store_1.default();
 let mainWindow = null;
-function startBackend(archivoRoot) {
+async function startBackend(archivoRoot) {
     process.env.ARCHIVO_ROOT = archivoRoot;
     try {
-        // Must set ARCHIVO_ROOT before requiring the backend module.
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const serverPath = path_1.default.join(electron_1.app.getAppPath(), 'backend', 'dist', 'server');
-        require(serverPath).startServer(3001);
+        await require(serverPath).startServer(3001);
     }
     catch (err) {
         electron_1.dialog.showErrorBox('Error al iniciar el servidor', `No se pudo iniciar el backend.\n\n${String(err)}`);
@@ -62,10 +61,10 @@ electron_1.ipcMain.handle('select-archivo-root', async () => {
     electron_1.app.exit(0);
     return null; // never reached, satisfies return type
 });
-electron_1.app.whenReady().then(() => {
+electron_1.app.whenReady().then(async () => {
     const archivoRoot = store.get('archivoRoot') ?? null;
     if (archivoRoot) {
-        startBackend(archivoRoot);
+        await startBackend(archivoRoot);
     }
     createWindow();
 });

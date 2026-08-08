@@ -4,6 +4,7 @@
   "description": "Archivo Genealógico Familiar — aplicación de escritorio local",
   "main": "electron/dist/main.js",
   "scripts": {
+    "postinstall": "electron-rebuild -f -w better-sqlite3",
     "electron:compile": "tsc -p electron/tsconfig.json",
     "backend:build": "cd backend && npm run build && node -e \"const fs=require('fs');fs.mkdirSync('dist/db',{recursive:true});fs.copyFileSync('src/db/schema.sql','dist/db/schema.sql');\"",
     "frontend:build": "cd frontend && npm run build",

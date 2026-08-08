@@ -10,13 +10,12 @@ const store = new Store<StoreSchema>();
 
 let mainWindow: BrowserWindow | null = null;
 
-function startBackend(archivoRoot: string): void {
+async function startBackend(archivoRoot: string): Promise<void> {
   process.env.ARCHIVO_ROOT = archivoRoot;
   try {
-    // Must set ARCHIVO_ROOT before requiring the backend module.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const serverPath = path.join(app.getAppPath(), 'backend', 'dist', 'server');
-    require(serverPath).startServer(3001);
+    await require(serverPath).startServer(3001);
   } catch (err) {
     dialog.showErrorBox(
       'Error al iniciar el servidor',
@@ -70,10 +69,10 @@ ipcMain.handle('select-archivo-root', async () => {
   return null; // never reached, satisfies return type
 });
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   const archivoRoot = store.get('archivoRoot') ?? null;
   if (archivoRoot) {
-    startBackend(archivoRoot);
+    await startBackend(archivoRoot);
   }
   createWindow();
 });
