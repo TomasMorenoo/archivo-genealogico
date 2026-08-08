@@ -14,6 +14,7 @@ export default function HomePage() {
   const [version, setVersion] = useState<string>('');
   const [padre, setPadre] = useState<PersonaListItem | null>(null);
   const [madre, setMadre] = useState<PersonaListItem | null>(null);
+  const [conyuge, setConyuge] = useState<PersonaListItem | null>(null);
 
   const load = useCallback(async () => {
     const data = await personasApi.list(search || undefined);
@@ -36,12 +37,14 @@ export default function HomePage() {
     setShowCreate(false);
     setPadre(null);
     setMadre(null);
+    setConyuge(null);
   }
 
   async function handleCreate(data: Partial<Persona>) {
     const created = await personasApi.create(data);
     if (padre) await relacionesApi.add({ persona_origen_id: created.id, tipo_relacion_id: 1, persona_destino_id: padre.id });
     if (madre) await relacionesApi.add({ persona_origen_id: created.id, tipo_relacion_id: 2, persona_destino_id: madre.id });
+    if (conyuge) await relacionesApi.add({ persona_origen_id: created.id, tipo_relacion_id: 5, persona_destino_id: conyuge.id });
     closeCreate();
     load();
   }
@@ -104,6 +107,13 @@ export default function HomePage() {
                   {madre
                     ? <div style={selectedStyle}>{madre.apellido}, {madre.nombre}<button onClick={() => setMadre(null)} style={clearBtn}>×</button></div>
                     : <PersonaSearchInput defaultSexo="F" onSelect={setMadre} placeholder="Buscar o crear madre..." />
+                  }
+                </div>
+                <div style={rowStyle}>
+                  <label style={labelStyle}>Cónyuge</label>
+                  {conyuge
+                    ? <div style={selectedStyle}>{conyuge.apellido}, {conyuge.nombre}<button onClick={() => setConyuge(null)} style={clearBtn}>×</button></div>
+                    : <PersonaSearchInput onSelect={setConyuge} placeholder="Buscar o crear cónyuge..." />
                   }
                 </div>
               </div>
