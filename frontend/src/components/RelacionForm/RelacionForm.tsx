@@ -67,22 +67,19 @@ export default function RelacionForm({ personaId, personaSexo, onSaved, onCancel
       <PersonaSearchInput
         label="Persona relacionada"
         excludeIds={[personaId]}
-        onSelect={setSeleccionada}
+        onSelect={async p => {
+          await relacionesApi.add({
+            persona_origen_id: personaId,
+            tipo_relacion_id: Number(tipoId),
+            persona_destino_id: p.id,
+          });
+          onSaved();
+        }}
         defaultSexo={defaultSexo}
       />
 
-      {seleccionada && (
-        <div style={{ padding: '7px 12px', background: '#f0f9ff', borderRadius: 4, fontSize: '0.9rem' }}>
-          <strong>{seleccionada.apellido}, {seleccionada.nombre}</strong>
-          {' '}<span style={{ color: '#888' }}>({seleccionada.pid})</span>
-          <button onClick={() => setSeleccionada(null)}
-            style={{ marginLeft: 8, border: 'none', background: 'none', cursor: 'pointer', color: '#c00' }}>×</button>
-        </div>
-      )}
-
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <button onClick={onCancel} style={btnSecondary}>Cancelar</button>
-        <button onClick={handleGuardar} disabled={!seleccionada} style={btnPrimary}>Agregar relación</button>
       </div>
     </div>
   );
