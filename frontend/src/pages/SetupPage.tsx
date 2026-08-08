@@ -17,6 +17,7 @@ export default function SetupPage({ onSetup }: Props) {
       if (!result) {
         setError('No se seleccionó ninguna carpeta.');
         setLoading(false);
+        return;
       }
       // If result is set, app.relaunch() fires — no further action needed here.
     } catch {
