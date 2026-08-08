@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { PersonaListItem, Persona, Relacion, TipoRelacion, Documento, Lugar } from '../types';
 
-const api = axios.create({ baseURL: '/api' });
+const api = axios.create({ baseURL: 'http://localhost:3001/api' });
 
 export const personasApi = {
   list: (q?: string) =>
