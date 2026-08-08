@@ -12,10 +12,18 @@ let mainWindow: BrowserWindow | null = null;
 
 function startBackend(archivoRoot: string): void {
   process.env.ARCHIVO_ROOT = archivoRoot;
-  // Must set ARCHIVO_ROOT before requiring the backend module.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const serverPath = path.join(app.getAppPath(), 'backend', 'dist', 'server');
-  require(serverPath).startServer(3001);
+  try {
+    // Must set ARCHIVO_ROOT before requiring the backend module.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const serverPath = path.join(app.getAppPath(), 'backend', 'dist', 'server');
+    require(serverPath).startServer(3001);
+  } catch (err) {
+    dialog.showErrorBox(
+      'Error al iniciar el servidor',
+      `No se pudo iniciar el backend.\n\n${String(err)}`
+    );
+    app.quit();
+  }
 }
 
 function createWindow(): void {
@@ -48,7 +56,8 @@ ipcMain.handle('get-archivo-root', () => {
 });
 
 ipcMain.handle('select-archivo-root', async () => {
-  const result = await dialog.showOpenDialog(mainWindow!, {
+  if (!mainWindow) return null;
+  const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openDirectory', 'createDirectory'],
     title: 'Elegí la carpeta del Archivo Genealógico',
     buttonLabel: 'Seleccionar carpeta',
@@ -58,7 +67,7 @@ ipcMain.handle('select-archivo-root', async () => {
   store.set('archivoRoot', chosen);
   app.relaunch();
   app.exit(0);
-  return chosen;
+  return null; // never reached, satisfies return type
 });
 
 app.whenReady().then(() => {
