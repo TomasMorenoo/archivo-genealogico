@@ -48,6 +48,34 @@ function resolveInverso(inversoId: number, sexo: string): number {
   return inversoId;
 }
 
+// Tipos que implican relación padre→hijo (origen=hijo, destino=padre)
+const PARENT_TIPOS = new Set([1, 2, 6, 7, 8, 9]);
+// Tipos que implican relación padre→hijo (origen=padre, destino=hijo)
+const CHILD_TIPOS = new Set([3, 4]);
+
+function getSexo(db: ReturnType<typeof getDb>, id: number): string {
+  return (db.prepare('SELECT sexo FROM personas WHERE id = ?').get(id) as any)?.sexo ?? 'M';
+}
+
+function insertHermanos(
+  db: ReturnType<typeof getDb>,
+  insertRelacion: ReturnType<ReturnType<typeof getDb>['prepare']>,
+  parentId: number,
+  newChildId: number
+): void {
+  const hermanos = db.prepare(`
+    SELECT persona_destino_id as id FROM relaciones
+    WHERE persona_origen_id = ? AND tipo_relacion_id IN (3, 4) AND persona_destino_id != ?
+  `).all(parentId, newChildId) as { id: number }[];
+
+  const newChildSexo = getSexo(db, newChildId);
+  for (const h of hermanos) {
+    const hSexo = getSexo(db, h.id);
+    insertRelacion.run(newChildId, hSexo === 'F' ? 11 : 10, h.id);
+    insertRelacion.run(h.id, newChildSexo === 'F' ? 11 : 10, newChildId);
+  }
+}
+
 export function addRelacion(
   personaOrigenId: number,
   tipoRelacionId: number,
@@ -68,6 +96,13 @@ export function addRelacion(
       const origen = db.prepare('SELECT sexo FROM personas WHERE id = ?').get(personaOrigenId) as { sexo: string } | undefined;
       const inversoId = resolveInverso(tipo.inverso_id, origen?.sexo ?? 'M');
       insertRelacion.run(personaDestinoId, inversoId, personaOrigenId);
+    }
+
+    // Auto-crear relaciones de hermanos
+    if (PARENT_TIPOS.has(tipoRelacionId)) {
+      insertHermanos(db, insertRelacion, personaDestinoId, personaOrigenId);
+    } else if (CHILD_TIPOS.has(tipoRelacionId)) {
+      insertHermanos(db, insertRelacion, personaOrigenId, personaDestinoId);
     }
   })();
 }
