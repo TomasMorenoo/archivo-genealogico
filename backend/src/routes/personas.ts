@@ -23,7 +23,8 @@ function regenerateMd(personaId: number): void {
 
 personasRouter.get('/', (req, res) => {
   const search = typeof req.query.q === 'string' ? req.query.q : undefined;
-  res.json(listPersonas(search));
+  const maxNacAnio = typeof req.query.max_nac_anio === 'string' ? Number(req.query.max_nac_anio) : undefined;
+  res.json(listPersonas(search, maxNacAnio));
 });
 
 personasRouter.get('/:id', (req, res) => {

@@ -93,20 +93,20 @@ export default function HomePage() {
           <PersonaForm
             onSave={handleCreate}
             onCancel={closeCreate}
-            extraSlot={
+            extraSlot={(nacAnio) => (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div style={rowStyle}>
                   <label style={labelStyle}>Padre</label>
                   {padre
                     ? <div style={selectedStyle}>{padre.apellido}, {padre.nombre}<button onClick={() => setPadre(null)} style={clearBtn}>×</button></div>
-                    : <PersonaSearchInput defaultSexo="M" onSelect={setPadre} placeholder="Buscar o crear padre..." />
+                    : <PersonaSearchInput defaultSexo="M" maxNacAnio={nacAnio} onSelect={setPadre} placeholder="Buscar o crear padre..." />
                   }
                 </div>
                 <div style={rowStyle}>
                   <label style={labelStyle}>Madre</label>
                   {madre
                     ? <div style={selectedStyle}>{madre.apellido}, {madre.nombre}<button onClick={() => setMadre(null)} style={clearBtn}>×</button></div>
-                    : <PersonaSearchInput defaultSexo="F" onSelect={setMadre} placeholder="Buscar o crear madre..." />
+                    : <PersonaSearchInput defaultSexo="F" maxNacAnio={nacAnio} onSelect={setMadre} placeholder="Buscar o crear madre..." />
                   }
                 </div>
                 <div style={rowStyle}>
@@ -117,7 +117,7 @@ export default function HomePage() {
                   }
                 </div>
               </div>
-            }
+            )}
           />
         </Modal>
       )}

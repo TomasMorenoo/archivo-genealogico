@@ -5,15 +5,21 @@ export function formatPid(id: number): string {
   return `P${String(id).padStart(5, '0')}`;
 }
 
-export function listPersonas(search?: string): PersonaListItem[] {
+export function listPersonas(search?: string, maxNacAnio?: number): PersonaListItem[] {
   const db = getDb();
   let query = `SELECT id, nombre, apellido, nac_dia, nac_mes, nac_anio, nac_tipo, def_dia, def_mes, def_anio, def_tipo, fallecida FROM personas`;
-  const params: string[] = [];
+  const conditions: string[] = [];
+  const params: (string | number)[] = [];
   if (search) {
-    query += ` WHERE nombre LIKE ? OR apellido LIKE ? OR (apellido || ', ' || nombre) LIKE ?`;
+    conditions.push(`(nombre LIKE ? OR apellido LIKE ? OR (apellido || ', ' || nombre) LIKE ?)`);
     const s = `%${search}%`;
     params.push(s, s, s);
   }
+  if (maxNacAnio) {
+    conditions.push(`(nac_anio IS NULL OR nac_anio < ?)`);
+    params.push(maxNacAnio);
+  }
+  if (conditions.length) query += ` WHERE ` + conditions.join(' AND ');
   query += ` ORDER BY apellido, nombre`;
   const rows = db.prepare(query).all(...params) as Array<{
     id: number; nombre: string; apellido: string;

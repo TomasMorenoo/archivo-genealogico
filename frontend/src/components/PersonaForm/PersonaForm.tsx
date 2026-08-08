@@ -8,7 +8,7 @@ interface Props {
   onSave: (data: Partial<Persona>) => void;
   onCancel: () => void;
   compact?: boolean;
-  extraSlot?: React.ReactNode;
+  extraSlot?: (nacAnio: number | null) => React.ReactNode;
 }
 
 function deriveTipo(dia: string, mes: string, anio: string, aprox: boolean): string {
@@ -142,7 +142,7 @@ export default function PersonaForm({ initial = {}, onSave, onCancel, compact = 
             </>
           )}
 
-          {extraSlot}
+          {extraSlot?.(form.nac_anio ? Number(form.nac_anio) : null)}
 
           <div style={rowStyle}>
             <label>Historia</label>

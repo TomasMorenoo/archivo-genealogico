@@ -9,9 +9,10 @@ interface Props {
   onSelect: (p: PersonaListItem) => void;
   placeholder?: string;
   defaultSexo?: 'M' | 'F' | 'otro';
+  maxNacAnio?: number | null;
 }
 
-export default function PersonaSearchInput({ label, excludeIds = [], onSelect, placeholder = 'Buscar persona...', defaultSexo }: Props) {
+export default function PersonaSearchInput({ label, excludeIds = [], onSelect, placeholder = 'Buscar persona...', defaultSexo, maxNacAnio }: Props) {
   const [busqueda, setBusqueda] = useState('');
   const [resultados, setResultados] = useState<PersonaListItem[]>([]);
   const [creandoNueva, setCreandoNueva] = useState(false);
@@ -21,10 +22,10 @@ export default function PersonaSearchInput({ label, excludeIds = [], onSelect, p
     if (busqueda.length < 2) { setResultados([]); return; }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
-      const r = await personasApi.list(busqueda);
+      const r = await personasApi.list(busqueda, maxNacAnio ?? undefined);
       setResultados(r.filter(p => !excludeIds.includes(p.id)));
     }, 200);
-  }, [busqueda, excludeIds]);
+  }, [busqueda, excludeIds, maxNacAnio]);
 
   async function handleCrearNueva(data: Partial<Persona>) {
     const nueva = await personasApi.create(data);

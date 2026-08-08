@@ -4,8 +4,8 @@ import type { PersonaListItem, Persona, Relacion, TipoRelacion, Documento, Lugar
 const api = axios.create({ baseURL: 'http://localhost:3001/api' });
 
 export const personasApi = {
-  list: (q?: string) =>
-    api.get<PersonaListItem[]>('/personas', { params: q ? { q } : {} }).then(r => r.data),
+  list: (q?: string, maxNacAnio?: number) =>
+    api.get<PersonaListItem[]>('/personas', { params: { ...(q ? { q } : {}), ...(maxNacAnio ? { max_nac_anio: maxNacAnio } : {}) } }).then(r => r.data),
   get: (id: number) =>
     api.get<Persona>(`/personas/${id}`).then(r => r.data),
   create: (data: Partial<Persona>) =>

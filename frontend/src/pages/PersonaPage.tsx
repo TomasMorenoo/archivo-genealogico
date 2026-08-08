@@ -162,6 +162,7 @@ export default function PersonaPage() {
                           <PersonaSearchInput
                             defaultSexo={sexo}
                             excludeIds={[numId]}
+                            maxNacAnio={label !== 'Cónyuge' ? persona.nac_anio : undefined}
                             onSelect={p => handleAddRelacion(tipoId, p.id)}
                             placeholder={`Buscar o crear ${label.toLowerCase()}...`}
                           />
