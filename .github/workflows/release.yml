@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Bump patch version
+        run: |
+          $version = node -e "console.log(require('./package.json').version)"
+          $parts = $version -split '\.'
+          $patch = [int]$parts[2] + 1
+          $newVersion = "$($parts[0]).$($parts[1]).$patch"
+          $content = Get-Content package.json -Raw
+          $content = $content -replace '"version": ".*?"', """version"": ""$newVersion"""
+          Set-Content package.json $content
+          echo "New version: $newVersion"
+        shell: pwsh
+
+      - name: Install root dependencies
+        run: npm install
+
+      - name: Install backend dependencies
+        run: npm install
+        working-directory: backend
+
+      - name: Install frontend dependencies
+        run: npm install
+        working-directory: frontend
+
+      - name: Build
+        run: npm run build
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: npx electron-builder --win --x64 --publish always

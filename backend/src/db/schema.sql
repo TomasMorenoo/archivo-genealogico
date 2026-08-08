@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS personas (
   def_tipo TEXT CHECK(def_tipo IN ('exacta','solo_anio','aproximada','desconocida')) DEFAULT 'desconocida',
   def_lugar_id INTEGER REFERENCES lugares(id),
   historia TEXT DEFAULT '',
+  fallecida INTEGER NOT NULL DEFAULT 0,
   foto_ruta TEXT,
   creado_en TEXT NOT NULL DEFAULT (datetime('now')),
   actualizado_en TEXT NOT NULL DEFAULT (datetime('now'))

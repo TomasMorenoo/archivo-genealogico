@@ -20,7 +20,15 @@ export interface PersonaListItem {
   pid: string;
   nombre: string;
   apellido: string;
+  nac_dia: number | null;
+  nac_mes: number | null;
   nac_anio: number | null;
+  nac_tipo: string;
+  def_dia: number | null;
+  def_mes: number | null;
+  def_anio: number | null;
+  def_tipo: string;
+  fallecida: boolean;
 }
 
 export interface Persona {
@@ -42,6 +50,7 @@ export interface Persona {
   def_lugar: Lugar | null;
   def_lugar_id?: number | null;
   historia: string;
+  fallecida: boolean;
   foto_ruta: string | null;
 }
 

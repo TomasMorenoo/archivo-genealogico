@@ -21,6 +21,7 @@ export function getDb(): Database.Database {
     db = new Database(dbPath);
     const schema = fs.readFileSync(SCHEMA_PATH, 'utf-8');
     db.exec(schema);
+    try { db.exec('ALTER TABLE personas ADD COLUMN fallecida INTEGER NOT NULL DEFAULT 0'); } catch {}
   }
   return db;
 }

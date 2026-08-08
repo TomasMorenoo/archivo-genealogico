@@ -24,6 +24,10 @@ function getDb() {
         db = new better_sqlite3_1.default(dbPath);
         const schema = fs_1.default.readFileSync(SCHEMA_PATH, 'utf-8');
         db.exec(schema);
+        try {
+            db.exec('ALTER TABLE personas ADD COLUMN fallecida INTEGER NOT NULL DEFAULT 0');
+        }
+        catch { }
     }
     return db;
 }

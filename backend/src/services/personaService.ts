@@ -7,7 +7,7 @@ export function formatPid(id: number): string {
 
 export function listPersonas(search?: string): PersonaListItem[] {
   const db = getDb();
-  let query = `SELECT id, nombre, apellido, nac_anio FROM personas`;
+  let query = `SELECT id, nombre, apellido, nac_dia, nac_mes, nac_anio, nac_tipo, def_dia, def_mes, def_anio, def_tipo, fallecida FROM personas`;
   const params: string[] = [];
   if (search) {
     query += ` WHERE nombre LIKE ? OR apellido LIKE ? OR (apellido || ', ' || nombre) LIKE ?`;
@@ -16,9 +16,12 @@ export function listPersonas(search?: string): PersonaListItem[] {
   }
   query += ` ORDER BY apellido, nombre`;
   const rows = db.prepare(query).all(...params) as Array<{
-    id: number; nombre: string; apellido: string; nac_anio: number | null;
+    id: number; nombre: string; apellido: string;
+    nac_dia: number | null; nac_mes: number | null; nac_anio: number | null; nac_tipo: string;
+    def_dia: number | null; def_mes: number | null; def_anio: number | null; def_tipo: string;
+    fallecida: number;
   }>;
-  return rows.map(r => ({ ...r, pid: formatPid(r.id) }));
+  return rows.map(r => ({ ...r, pid: formatPid(r.id), fallecida: !!r.fallecida }));
 }
 
 export function getPersona(id: number): Persona | null {
@@ -36,6 +39,7 @@ export function getPersona(id: number): Persona | null {
   return {
     ...row,
     pid: formatPid(row.id),
+    fallecida: !!row.fallecida,
     nac_lugar: row.nac_ciudad ? {
       id: row.nac_lugar_id, ciudad: row.nac_ciudad,
       provincia: row.nac_provincia, pais: row.nac_pais,
@@ -62,6 +66,7 @@ export interface CreatePersonaInput {
   def_tipo?: string;
   def_lugar_id?: number | null;
   historia?: string;
+  fallecida?: boolean;
 }
 
 export function createPersona(input: CreatePersonaInput): Persona {
@@ -69,10 +74,10 @@ export function createPersona(input: CreatePersonaInput): Persona {
   const result = db.prepare(`
     INSERT INTO personas
       (nombre, apellido, sexo, nac_dia, nac_mes, nac_anio, nac_tipo, nac_lugar_id,
-       def_dia, def_mes, def_anio, def_tipo, def_lugar_id, historia)
+       def_dia, def_mes, def_anio, def_tipo, def_lugar_id, historia, fallecida)
     VALUES
       (@nombre, @apellido, @sexo, @nac_dia, @nac_mes, @nac_anio, @nac_tipo, @nac_lugar_id,
-       @def_dia, @def_mes, @def_anio, @def_tipo, @def_lugar_id, @historia)
+       @def_dia, @def_mes, @def_anio, @def_tipo, @def_lugar_id, @historia, @fallecida)
   `).run({
     nombre: input.nombre,
     apellido: input.apellido,
@@ -88,6 +93,7 @@ export function createPersona(input: CreatePersonaInput): Persona {
     def_tipo: input.def_tipo ?? 'desconocida',
     def_lugar_id: input.def_lugar_id ?? null,
     historia: input.historia ?? '',
+    fallecida: input.fallecida ? 1 : 0,
   });
   return getPersona(result.lastInsertRowid as number)!;
 }
@@ -95,12 +101,12 @@ export function createPersona(input: CreatePersonaInput): Persona {
 export function updatePersona(id: number, input: Partial<CreatePersonaInput>): Persona | null {
   const db = getDb();
   const allowed = ['nombre','apellido','sexo','nac_dia','nac_mes','nac_anio','nac_tipo',
-    'nac_lugar_id','def_dia','def_mes','def_anio','def_tipo','def_lugar_id','historia'];
+    'nac_lugar_id','def_dia','def_mes','def_anio','def_tipo','def_lugar_id','historia','fallecida'];
   const entries = Object.entries(input).filter(([k]) => allowed.includes(k));
   if (entries.length === 0) return getPersona(id);
   const fields = entries.map(([k]) => `${k} = @${k}`).join(', ');
   const params: Record<string, any> = { id };
-  for (const [k, v] of entries) params[k] = v;
+  for (const [k, v] of entries) params[k] = k === 'fallecida' ? (v ? 1 : 0) : v;
   db.prepare(`UPDATE personas SET ${fields}, actualizado_en = datetime('now') WHERE id = @id`).run(params);
   return getPersona(id);
 }

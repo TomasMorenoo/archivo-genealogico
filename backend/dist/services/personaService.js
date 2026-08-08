@@ -12,7 +12,7 @@ function formatPid(id) {
 }
 function listPersonas(search) {
     const db = (0, database_1.getDb)();
-    let query = `SELECT id, nombre, apellido, nac_anio FROM personas`;
+    let query = `SELECT id, nombre, apellido, nac_dia, nac_mes, nac_anio, nac_tipo, def_dia, def_mes, def_anio, def_tipo, fallecida FROM personas`;
     const params = [];
     if (search) {
         query += ` WHERE nombre LIKE ? OR apellido LIKE ? OR (apellido || ', ' || nombre) LIKE ?`;
@@ -21,7 +21,7 @@ function listPersonas(search) {
     }
     query += ` ORDER BY apellido, nombre`;
     const rows = db.prepare(query).all(...params);
-    return rows.map(r => ({ ...r, pid: formatPid(r.id) }));
+    return rows.map(r => ({ ...r, pid: formatPid(r.id), fallecida: !!r.fallecida }));
 }
 function getPersona(id) {
     const db = (0, database_1.getDb)();
@@ -39,6 +39,7 @@ function getPersona(id) {
     return {
         ...row,
         pid: formatPid(row.id),
+        fallecida: !!row.fallecida,
         nac_lugar: row.nac_ciudad ? {
             id: row.nac_lugar_id, ciudad: row.nac_ciudad,
             provincia: row.nac_provincia, pais: row.nac_pais,
@@ -54,10 +55,10 @@ function createPersona(input) {
     const result = db.prepare(`
     INSERT INTO personas
       (nombre, apellido, sexo, nac_dia, nac_mes, nac_anio, nac_tipo, nac_lugar_id,
-       def_dia, def_mes, def_anio, def_tipo, def_lugar_id, historia)
+       def_dia, def_mes, def_anio, def_tipo, def_lugar_id, historia, fallecida)
     VALUES
       (@nombre, @apellido, @sexo, @nac_dia, @nac_mes, @nac_anio, @nac_tipo, @nac_lugar_id,
-       @def_dia, @def_mes, @def_anio, @def_tipo, @def_lugar_id, @historia)
+       @def_dia, @def_mes, @def_anio, @def_tipo, @def_lugar_id, @historia, @fallecida)
   `).run({
         nombre: input.nombre,
         apellido: input.apellido,
@@ -73,20 +74,21 @@ function createPersona(input) {
         def_tipo: input.def_tipo ?? 'desconocida',
         def_lugar_id: input.def_lugar_id ?? null,
         historia: input.historia ?? '',
+        fallecida: input.fallecida ? 1 : 0,
     });
     return getPersona(result.lastInsertRowid);
 }
 function updatePersona(id, input) {
     const db = (0, database_1.getDb)();
     const allowed = ['nombre', 'apellido', 'sexo', 'nac_dia', 'nac_mes', 'nac_anio', 'nac_tipo',
-        'nac_lugar_id', 'def_dia', 'def_mes', 'def_anio', 'def_tipo', 'def_lugar_id', 'historia'];
+        'nac_lugar_id', 'def_dia', 'def_mes', 'def_anio', 'def_tipo', 'def_lugar_id', 'historia', 'fallecida'];
     const entries = Object.entries(input).filter(([k]) => allowed.includes(k));
     if (entries.length === 0)
         return getPersona(id);
     const fields = entries.map(([k]) => `${k} = @${k}`).join(', ');
     const params = { id };
     for (const [k, v] of entries)
-        params[k] = v;
+        params[k] = k === 'fallecida' ? (v ? 1 : 0) : v;
     db.prepare(`UPDATE personas SET ${fields}, actualizado_en = datetime('now') WHERE id = @id`).run(params);
     return getPersona(id);
 }

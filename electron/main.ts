@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { autoUpdater } from 'electron-updater';
 import Store from 'electron-store';
 import path from 'path';
 
@@ -75,6 +76,21 @@ app.whenReady().then(async () => {
     await startBackend(archivoRoot);
   }
   createWindow();
+
+  const isDev = process.env.ELECTRON_DEV === 'true';
+  if (!isDev) {
+    autoUpdater.checkForUpdates();
+    autoUpdater.on('update-downloaded', () => {
+      dialog.showMessageBox({
+        type: 'info',
+        title: 'Actualización disponible',
+        message: 'Hay una nueva versión disponible. ¿Instalar ahora?',
+        buttons: ['Instalar y reiniciar', 'Después'],
+      }).then(result => {
+        if (result.response === 0) autoUpdater.quitAndInstall();
+      });
+    });
+  }
 });
 
 app.on('window-all-closed', () => {

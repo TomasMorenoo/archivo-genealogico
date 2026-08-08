@@ -63,6 +63,7 @@ export default function PersonaPage() {
 
   const nacimiento = formatFecha(persona.nac_dia, persona.nac_mes, persona.nac_anio, persona.nac_tipo);
   const defuncion = formatFecha(persona.def_dia, persona.def_mes, persona.def_anio, persona.def_tipo);
+  const edad = persona.fallecida ? calcEdad(persona.nac_dia, persona.nac_mes, persona.nac_anio, persona.def_dia, persona.def_mes, persona.def_anio) : null;
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: '32px 16px' }}>
@@ -100,12 +101,18 @@ export default function PersonaPage() {
                   ['Nombre', persona.nombre],
                   ['Apellido', persona.apellido],
                   ['Sexo', { M: 'Masculino', F: 'Femenino', otro: 'Otro' }[persona.sexo]],
+                  ['Estado', persona.fallecida ? 'Fallecido/a' : 'Vivo/a'],
                   ['Nacimiento', nacimiento],
                   ['Lugar nacimiento', persona.nac_lugar
                     ? [persona.nac_lugar.ciudad, persona.nac_lugar.provincia, persona.nac_lugar.pais].filter(Boolean).join(', ')
                     : '—'],
-                  ['Defunción', defuncion],
-                ] as [string, string | undefined][]).map(([label, val]) => (
+                  ...(persona.fallecida ? [
+                    ['Defunción', defuncion + (edad ? ` (${edad})` : '')],
+                    ['Lugar defunción', persona.def_lugar
+                      ? [persona.def_lugar.ciudad, persona.def_lugar.provincia, persona.def_lugar.pais].filter(Boolean).join(', ')
+                      : '—'],
+                  ] : []),
+                ] as [string, string][]).map(([label, val]) => (
                   <tr key={label}>
                     <td style={labelCell}>{label}</td>
                     <td style={valueCell}>{val || '—'}</td>
@@ -200,10 +207,28 @@ export default function PersonaPage() {
 function formatFecha(dia: number | null, mes: number | null, anio: number | null, tipo: string): string {
   if (tipo === 'desconocida') return '—';
   if (tipo === 'aproximada' && anio) return `aprox. ${anio}`;
-  if (tipo === 'solo_anio' && anio) return String(anio);
   if (dia && mes && anio) return `${String(dia).padStart(2,'0')}/${String(mes).padStart(2,'0')}/${anio}`;
   if (anio) return String(anio);
   return '—';
+}
+
+function calcEdad(
+  nacDia: number | null, nacMes: number | null, nacAnio: number | null,
+  defDia: number | null, defMes: number | null, defAnio: number | null
+): string | null {
+  if (!nacAnio || !defAnio) return null;
+  if (nacDia && nacMes && defDia && defMes) {
+    let years = defAnio - nacAnio;
+    if (defMes < nacMes || (defMes === nacMes && defDia < nacDia)) years--;
+    if (years < 1) {
+      let months = (defAnio - nacAnio) * 12 + (defMes - nacMes);
+      if (defDia < nacDia) months--;
+      return `${months} ${months === 1 ? 'mes' : 'meses'}`;
+    }
+    return `${years} años`;
+  }
+  const diff = defAnio - nacAnio;
+  return `${diff} años`;
 }
 
 const card: React.CSSProperties = { background: '#fff', borderRadius: 8, padding: 20, marginBottom: 16, border: '1px solid #e8e8e8' };

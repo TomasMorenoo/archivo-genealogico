@@ -27,7 +27,10 @@ export default function PersonaSearchInput({ label, excludeIds = [], onSelect, p
 
   async function handleCrearNueva(data: Partial<Persona>) {
     const nueva = await personasApi.create(data);
-    onSelect({ id: nueva.id, pid: nueva.pid, nombre: nueva.nombre, apellido: nueva.apellido, nac_anio: nueva.nac_anio });
+    onSelect({ id: nueva.id, pid: nueva.pid, nombre: nueva.nombre, apellido: nueva.apellido,
+      nac_dia: nueva.nac_dia, nac_mes: nueva.nac_mes, nac_anio: nueva.nac_anio, nac_tipo: nueva.nac_tipo,
+      def_dia: nueva.def_dia, def_mes: nueva.def_mes, def_anio: nueva.def_anio, def_tipo: nueva.def_tipo,
+      fallecida: nueva.fallecida });
     setCreandoNueva(false);
     setBusqueda('');
   }
@@ -36,7 +39,7 @@ export default function PersonaSearchInput({ label, excludeIds = [], onSelect, p
     return (
       <div style={{ padding: 12, background: '#f9f9f9', borderRadius: 6, border: '1px solid #ddd' }}>
         <p style={{ marginBottom: 10, fontSize: '0.85rem', color: '#666' }}>Crear nueva persona</p>
-        <PersonaForm compact onSave={handleCrearNueva} onCancel={() => setCreandoNueva(false)} />
+        <PersonaForm onSave={handleCrearNueva} onCancel={() => setCreandoNueva(false)} />
       </div>
     );
   }

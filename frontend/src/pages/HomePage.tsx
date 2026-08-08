@@ -19,8 +19,8 @@ export default function HomePage() {
   useEffect(() => { load(); }, [load]);
 
   const sorted = [...personas].sort((a, b) => {
-    const va = sortKey === 'pid' ? a.id : sortKey === 'nac_anio' ? (a.nac_anio ?? 9999) : a.apellido;
-    const vb = sortKey === 'pid' ? b.id : sortKey === 'nac_anio' ? (b.nac_anio ?? 9999) : b.apellido;
+    const va = sortKey === 'pid' ? a.id : sortKey === 'nac_anio' ? (a.nac_anio ?? 9999) : a.apellido.toLowerCase();
+    const vb = sortKey === 'pid' ? b.id : sortKey === 'nac_anio' ? (b.nac_anio ?? 9999) : b.apellido.toLowerCase();
     const cmp = va < vb ? -1 : va > vb ? 1 : 0;
     return sortDir === 'asc' ? cmp : -cmp;
   });

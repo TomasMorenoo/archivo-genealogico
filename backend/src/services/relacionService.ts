@@ -24,6 +24,30 @@ export function getRelacionesDePersona(personaId: number): Relacion[] {
   return rows.map(r => ({ ...r, persona_destino_pid: formatPid(r.persona_destino_id) }));
 }
 
+// Grupos de relaciones generizadas: todos los ids que representan el mismo concepto
+const GENDERED_GROUPS: Record<number, number[]> = {
+  1: [1, 2], 2: [1, 2],       // Padre / Madre
+  3: [3, 4], 4: [3, 4],       // Hijo / Hija
+  6: [6, 7], 7: [6, 7],       // Padre biológico / Madre biológica
+  8: [8, 9], 9: [8, 9],       // Padre adoptivo / Madre adoptiva
+  10: [10, 11], 11: [10, 11], // Hermano / Hermana
+  13: [13, 14], 14: [13, 14], // Abuelo / Abuela
+  15: [15, 16], 16: [15, 16], // Bisabuelo / Bisabuela
+};
+
+// Elige el inverso correcto según el sexo de la persona origen
+function resolveInverso(inversoId: number, sexo: string): number {
+  const f = sexo === 'F';
+  if (inversoId === 1 || inversoId === 2)   return f ? 2 : 1;
+  if (inversoId === 3 || inversoId === 4)   return f ? 4 : 3;
+  if (inversoId === 6 || inversoId === 7)   return f ? 7 : 6;
+  if (inversoId === 8 || inversoId === 9)   return f ? 9 : 8;
+  if (inversoId === 10 || inversoId === 11) return f ? 11 : 10;
+  if (inversoId === 13 || inversoId === 14) return f ? 14 : 13;
+  if (inversoId === 15 || inversoId === 16) return f ? 16 : 15;
+  return inversoId;
+}
+
 export function addRelacion(
   personaOrigenId: number,
   tipoRelacionId: number,
@@ -41,7 +65,9 @@ export function addRelacion(
   db.transaction(() => {
     insertRelacion.run(personaOrigenId, tipoRelacionId, personaDestinoId);
     if (tipo.inverso_id) {
-      insertRelacion.run(personaDestinoId, tipo.inverso_id, personaOrigenId);
+      const origen = db.prepare('SELECT sexo FROM personas WHERE id = ?').get(personaOrigenId) as { sexo: string } | undefined;
+      const inversoId = resolveInverso(tipo.inverso_id, origen?.sexo ?? 'M');
+      insertRelacion.run(personaDestinoId, inversoId, personaOrigenId);
     }
   })();
 }
@@ -55,10 +81,12 @@ export function deleteRelacion(relacionId: number): void {
   db.transaction(() => {
     db.prepare('DELETE FROM relaciones WHERE id = ?').run(relacionId);
     if (tipo.inverso_id) {
+      const group = GENDERED_GROUPS[tipo.inverso_id] ?? [tipo.inverso_id];
+      const placeholders = group.map(() => '?').join(', ');
       db.prepare(`
         DELETE FROM relaciones
-        WHERE persona_origen_id = ? AND tipo_relacion_id = ? AND persona_destino_id = ?
-      `).run(rel.persona_destino_id, tipo.inverso_id, rel.persona_origen_id);
+        WHERE persona_origen_id = ? AND tipo_relacion_id IN (${placeholders}) AND persona_destino_id = ?
+      `).run(rel.persona_destino_id, ...group, rel.persona_origen_id);
     }
   })();
 }
