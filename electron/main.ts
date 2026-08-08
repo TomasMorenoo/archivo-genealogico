@@ -1,0 +1,74 @@
+import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import Store from 'electron-store';
+import path from 'path';
+
+interface StoreSchema {
+  archivoRoot?: string;
+}
+
+const store = new Store<StoreSchema>();
+
+let mainWindow: BrowserWindow | null = null;
+
+function startBackend(archivoRoot: string): void {
+  process.env.ARCHIVO_ROOT = archivoRoot;
+  // Must set ARCHIVO_ROOT before requiring the backend module.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const serverPath = path.join(app.getAppPath(), 'backend', 'dist', 'server');
+  require(serverPath).startServer(3001);
+}
+
+function createWindow(): void {
+  mainWindow = new BrowserWindow({
+    width: 1280,
+    height: 800,
+    minWidth: 900,
+    minHeight: 600,
+    title: 'Archivo Genealógico Familiar',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  const isDev = process.env.ELECTRON_DEV === 'true';
+  if (isDev) {
+    mainWindow.loadURL('http://localhost:5173');
+    mainWindow.webContents.openDevTools();
+  } else {
+    mainWindow.loadFile(
+      path.join(app.getAppPath(), 'frontend', 'dist', 'index.html')
+    );
+  }
+}
+
+ipcMain.handle('get-archivo-root', () => {
+  return store.get('archivoRoot') ?? null;
+});
+
+ipcMain.handle('select-archivo-root', async () => {
+  const result = await dialog.showOpenDialog(mainWindow!, {
+    properties: ['openDirectory', 'createDirectory'],
+    title: 'Elegí la carpeta del Archivo Genealógico',
+    buttonLabel: 'Seleccionar carpeta',
+  });
+  if (result.canceled || !result.filePaths.length) return null;
+  const chosen = result.filePaths[0];
+  store.set('archivoRoot', chosen);
+  app.relaunch();
+  app.exit(0);
+  return chosen;
+});
+
+app.whenReady().then(() => {
+  const archivoRoot = store.get('archivoRoot') ?? null;
+  if (archivoRoot) {
+    startBackend(archivoRoot);
+  }
+  createWindow();
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit();
+});
