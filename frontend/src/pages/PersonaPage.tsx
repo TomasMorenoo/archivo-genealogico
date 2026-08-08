@@ -137,17 +137,18 @@ export default function PersonaPage() {
         {(() => {
           const padreRel = relaciones.find(r => r.tipo_relacion_nombre === 'Padre');
           const madreRel = relaciones.find(r => r.tipo_relacion_nombre === 'Madre');
-          const otras = relaciones.filter(r => r.tipo_relacion_nombre !== 'Padre' && r.tipo_relacion_nombre !== 'Madre');
+          const conyugeRel = relaciones.find(r => r.tipo_relacion_nombre === 'Cónyuge');
+          const otras = relaciones.filter(r => !['Padre', 'Madre', 'Cónyuge'].includes(r.tipo_relacion_nombre));
           return (
             <>
               <div style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {(['Padre', 'Madre'] as const).map(label => {
-                  const rel = label === 'Padre' ? padreRel : madreRel;
-                  const tipoId = label === 'Padre' ? 1 : 2;
-                  const sexo = label === 'Padre' ? 'M' as const : 'F' as const;
+                {(['Padre', 'Madre', 'Cónyuge'] as const).map(label => {
+                  const rel = label === 'Padre' ? padreRel : label === 'Madre' ? madreRel : conyugeRel;
+                  const tipoId = label === 'Padre' ? 1 : label === 'Madre' ? 2 : 5;
+                  const sexo = label === 'Padre' ? 'M' as const : label === 'Madre' ? 'F' as const : undefined;
                   return (
                     <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ ...relTag, minWidth: 50 }}>{label}</span>
+                      <span style={{ ...relTag, minWidth: 64 }}>{label}</span>
                       {rel ? (
                         <>
                           <Link to={`/persona/${rel.persona_destino_id}`} style={{ color: '#0070f3', flex: 1 }}>
@@ -166,6 +167,7 @@ export default function PersonaPage() {
                           />
                         </div>
                       )}
+
                     </div>
                   );
                 })}
