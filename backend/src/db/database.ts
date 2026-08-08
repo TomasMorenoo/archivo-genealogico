@@ -22,8 +22,24 @@ export function getDb(): Database.Database {
     const schema = fs.readFileSync(SCHEMA_PATH, 'utf-8');
     db.exec(schema);
     try { db.exec('ALTER TABLE personas ADD COLUMN fallecida INTEGER NOT NULL DEFAULT 0'); } catch {}
+    runMigrations(db);
   }
   return db;
+}
+
+function runMigrations(db: Database.Database): void {
+  // Corrige relaciones con género incorrecto según el sexo de persona_destino
+  const grupos: [number, number][] = [
+    [1, 2], [3, 4], [6, 7], [8, 9], [10, 11], [13, 14], [15, 16],
+  ];
+  for (const [M, F] of grupos) {
+    db.prepare(`UPDATE relaciones SET tipo_relacion_id = ?
+      WHERE tipo_relacion_id IN (?, ?)
+      AND persona_destino_id IN (SELECT id FROM personas WHERE sexo = 'F')`).run(F, M, F);
+    db.prepare(`UPDATE relaciones SET tipo_relacion_id = ?
+      WHERE tipo_relacion_id IN (?, ?)
+      AND persona_destino_id IN (SELECT id FROM personas WHERE sexo != 'F')`).run(M, M, F);
+  }
 }
 
 export function closeDb(): void {
