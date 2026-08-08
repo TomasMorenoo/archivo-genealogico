@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import Store from 'electron-store';
 import path from 'path';
@@ -72,11 +72,38 @@ ipcMain.handle('select-archivo-root', async () => {
   return null; // never reached, satisfies return type
 });
 
+function buildMenu(): void {
+  const template: Electron.MenuItemConstructorOptions[] = [
+    { role: 'fileMenu' },
+    { role: 'editMenu' },
+    { role: 'viewMenu' },
+    { role: 'windowMenu' },
+    {
+      label: 'Ayuda',
+      submenu: [
+        {
+          label: 'Buscar actualizaciones',
+          click: () => {
+            autoUpdater.checkForUpdates();
+            dialog.showMessageBox({ type: 'info', title: 'Actualizaciones', message: 'Buscando actualizaciones...', buttons: ['OK'] });
+          },
+        },
+        {
+          label: `Versión ${app.getVersion()}`,
+          enabled: false,
+        },
+      ],
+    },
+  ];
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
+
 app.whenReady().then(async () => {
   const archivoRoot = store.get('archivoRoot') ?? null;
   if (archivoRoot) {
     await startBackend(archivoRoot);
   }
+  buildMenu();
   createWindow();
 
   const isDev = process.env.ELECTRON_DEV === 'true';
