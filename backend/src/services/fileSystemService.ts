@@ -2,7 +2,13 @@ import fs from 'fs';
 import path from 'path';
 import type { Persona, Relacion, Documento } from '../types';
 
-export const DATA_ROOT = path.join(process.cwd(), '..', 'Archivo_Genealogico');
+export function getDataRoot(): string {
+  const root = process.env.ARCHIVO_ROOT;
+  if (!root) {
+    return path.join(process.cwd(), '..', 'Archivo_Genealogico');
+  }
+  return root;
+}
 
 export function formatDid(id: number): string {
   return `D${String(id).padStart(5, '0')}`;
@@ -23,7 +29,7 @@ export function personaFolderName(persona: { id: number; nombre: string; apellid
 }
 
 export function personaFolderPath(persona: { id: number; nombre: string; apellido: string }): string {
-  return path.join(DATA_ROOT, 'Personas', personaFolderName(persona));
+  return path.join(getDataRoot(), 'Personas', personaFolderName(persona));
 }
 
 export function ensurePersonaFolder(persona: { id: number; nombre: string; apellido: string }): string {
