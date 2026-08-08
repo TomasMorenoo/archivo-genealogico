@@ -79,7 +79,6 @@ app.whenReady().then(async () => {
 
   const isDev = process.env.ELECTRON_DEV === 'true';
   if (!isDev) {
-    autoUpdater.checkForUpdates();
     autoUpdater.on('update-downloaded', () => {
       dialog.showMessageBox({
         type: 'info',
@@ -90,6 +89,8 @@ app.whenReady().then(async () => {
         if (result.response === 0) autoUpdater.quitAndInstall();
       });
     });
+    autoUpdater.checkForUpdates();
+    setInterval(() => autoUpdater.checkForUpdates(), 60 * 60 * 1000);
   }
 });
 
