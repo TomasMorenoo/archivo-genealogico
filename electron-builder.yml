@@ -1,0 +1,28 @@
+appId: com.genealogico.archivo
+productName: Archivo Genealógico Familiar
+copyright: Copyright © 2026
+
+directories:
+  output: release
+
+files:
+  - electron/dist/**
+  - backend/dist/**
+  - frontend/dist/**
+  - node_modules/**
+  - package.json
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  installerLanguages:
+    - es_ES
+
+asar: false
