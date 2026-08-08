@@ -5,6 +5,7 @@ import type { Persona, Relacion, Documento } from '../types';
 import PersonaForm from '../components/PersonaForm/PersonaForm';
 import RelacionForm from '../components/RelacionForm/RelacionForm';
 import DocumentoSection from '../components/DocumentoSection/DocumentoSection';
+import PersonaSearchInput from '../components/PersonaSearchInput/PersonaSearchInput';
 
 export default function PersonaPage() {
   const { id } = useParams<{ id: string }>();
@@ -50,6 +51,11 @@ export default function PersonaPage() {
 
   async function handleDeleteRelacion(relId: number) {
     await relacionesApi.delete(relId);
+    loadRelaciones();
+  }
+
+  async function handleAddRelacion(tipoId: number, personaDestinoId: number) {
+    await relacionesApi.add({ persona_origen_id: numId, tipo_relacion_id: tipoId, persona_destino_id: personaDestinoId });
     loadRelaciones();
   }
 
@@ -128,38 +134,75 @@ export default function PersonaPage() {
           <button onClick={() => setAddingRelacion(true)} style={btnSmall}>+ Agregar</button>
         </div>
 
-        {addingRelacion && (
-          <div style={{ marginBottom: 16, padding: 16, background: '#f9f9f9', borderRadius: 6 }}>
-            <RelacionForm
-              personaId={numId}
-              personaSexo={persona.sexo}
-              onSaved={() => { setAddingRelacion(false); loadRelaciones(); }}
-              onCancel={() => setAddingRelacion(false)}
-            />
-          </div>
-        )}
+        {(() => {
+          const padreRel = relaciones.find(r => r.tipo_relacion_nombre === 'Padre');
+          const madreRel = relaciones.find(r => r.tipo_relacion_nombre === 'Madre');
+          const otras = relaciones.filter(r => r.tipo_relacion_nombre !== 'Padre' && r.tipo_relacion_nombre !== 'Madre');
+          return (
+            <>
+              <div style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {(['Padre', 'Madre'] as const).map(label => {
+                  const rel = label === 'Padre' ? padreRel : madreRel;
+                  const tipoId = label === 'Padre' ? 1 : 2;
+                  const sexo = label === 'Padre' ? 'M' as const : 'F' as const;
+                  return (
+                    <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ ...relTag, minWidth: 50 }}>{label}</span>
+                      {rel ? (
+                        <>
+                          <Link to={`/persona/${rel.persona_destino_id}`} style={{ color: '#0070f3', flex: 1 }}>
+                            {rel.persona_destino_nombre}
+                          </Link>
+                          <span style={{ color: '#999', fontSize: '0.82rem' }}>({rel.persona_destino_pid})</span>
+                          <button onClick={() => handleDeleteRelacion(rel.id)} style={delBtn}>×</button>
+                        </>
+                      ) : (
+                        <div style={{ flex: 1 }}>
+                          <PersonaSearchInput
+                            defaultSexo={sexo}
+                            excludeIds={[numId]}
+                            onSelect={p => handleAddRelacion(tipoId, p.id)}
+                            placeholder={`Buscar o crear ${label.toLowerCase()}...`}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
 
-        {relaciones.length === 0 && !addingRelacion
-          ? <p style={{ color: '#999' }}>Sin relaciones registradas.</p>
-          : (
-            <ul style={{ padding: 0, listStyle: 'none' }}>
-              {relaciones.map(r => (
-                <li key={r.id} style={relItem}>
-                  <div>
-                    <span style={relTag}>{r.tipo_relacion_nombre}</span>
-                    <Link to={`/persona/${r.persona_destino_id}`} style={{ color: '#0070f3' }}>
-                      {r.persona_destino_nombre}
-                    </Link>
-                    <span style={{ color: '#999', marginLeft: 6, fontSize: '0.82rem' }}>
-                      ({r.persona_destino_pid})
-                    </span>
-                  </div>
-                  <button onClick={() => handleDeleteRelacion(r.id)} style={delBtn}>×</button>
-                </li>
-              ))}
-            </ul>
-          )
-        }
+              {addingRelacion && (
+                <div style={{ marginBottom: 16, padding: 16, background: '#f9f9f9', borderRadius: 6 }}>
+                  <RelacionForm
+                    personaId={numId}
+                    personaSexo={persona.sexo}
+                    onSaved={() => { setAddingRelacion(false); loadRelaciones(); }}
+                    onCancel={() => setAddingRelacion(false)}
+                  />
+                </div>
+              )}
+
+              {otras.length > 0 && (
+                <ul style={{ padding: 0, listStyle: 'none', borderTop: '1px solid #f0f0f0', paddingTop: 8, marginTop: 4 }}>
+                  {otras.map(r => (
+                    <li key={r.id} style={relItem}>
+                      <div>
+                        <span style={relTag}>{r.tipo_relacion_nombre}</span>
+                        <Link to={`/persona/${r.persona_destino_id}`} style={{ color: '#0070f3' }}>
+                          {r.persona_destino_nombre}
+                        </Link>
+                        <span style={{ color: '#999', marginLeft: 6, fontSize: '0.82rem' }}>
+                          ({r.persona_destino_pid})
+                        </span>
+                      </div>
+                      <button onClick={() => handleDeleteRelacion(r.id)} style={delBtn}>×</button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          );
+        })()}
       </section>
 
       {!editing && (
