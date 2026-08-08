@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { personasApi } from '../api/client';
 import type { Persona, PersonaListItem } from '../types';
+
 import PersonaList from '../components/PersonaList/PersonaList';
 import PersonaForm from '../components/PersonaForm/PersonaForm';
 
@@ -10,6 +11,7 @@ export default function HomePage() {
   const [showCreate, setShowCreate] = useState(false);
   const [sortKey, setSortKey] = useState<'apellido' | 'nac_anio' | 'pid'>('apellido');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [version, setVersion] = useState<string>('');
 
   const load = useCallback(async () => {
     const data = await personasApi.list(search || undefined);
@@ -17,6 +19,9 @@ export default function HomePage() {
   }, [search]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    window.electronAPI?.getVersion().then(v => setVersion(v));
+  }, []);
 
   const sorted = [...personas].sort((a, b) => {
     const va = sortKey === 'pid' ? a.id : sortKey === 'nac_anio' ? (a.nac_anio ?? 9999) : a.apellido.toLowerCase();
@@ -65,6 +70,10 @@ export default function HomePage() {
       </div>
 
       <PersonaList personas={sorted} />
+
+      {version && (
+        <p style={{ color: '#ccc', fontSize: '0.75rem', marginTop: 32, textAlign: 'right' }}>v{version}</p>
+      )}
 
       {showCreate && (
         <Modal title="Nueva Persona" onClose={() => setShowCreate(false)}>

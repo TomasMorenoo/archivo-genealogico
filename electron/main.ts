@@ -51,6 +51,8 @@ function createWindow(): void {
   }
 }
 
+ipcMain.handle('get-version', () => app.getVersion());
+
 ipcMain.handle('get-archivo-root', () => {
   return store.get('archivoRoot') ?? null;
 });
