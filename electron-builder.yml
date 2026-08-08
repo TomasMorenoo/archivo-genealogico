@@ -9,7 +9,6 @@ files:
   - electron/dist/**
   - backend/dist/**
   - frontend/dist/**
-  - node_modules/**
   - package.json
 
 win:
@@ -22,7 +21,5 @@ nsis:
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
-  installerLanguages:
-    - es_ES
 
 asar: false
