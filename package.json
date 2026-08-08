@@ -1,0 +1,36 @@
+{
+  "name": "archivo-genealogico",
+  "version": "1.0.0",
+  "description": "Archivo Genealógico Familiar — aplicación de escritorio local",
+  "main": "electron/dist/main.js",
+  "scripts": {
+    "electron:compile": "tsc -p electron/tsconfig.json",
+    "backend:build": "cd backend && npm run build && node -e \"const fs=require('fs');fs.mkdirSync('dist/db',{recursive:true});fs.copyFileSync('src/db/schema.sql','dist/db/schema.sql');\"",
+    "frontend:build": "cd frontend && npm run build",
+    "build": "npm run backend:build && npm run frontend:build && npm run electron:compile",
+    "electron:dev": "cross-env ELECTRON_DEV=true electron .",
+    "dev": "concurrently -k \"cd backend && npm run build -- --watch\" \"cd frontend && npm run dev\" \"wait-on http://localhost:5173 && npm run electron:dev\"",
+    "dist": "npm run build && electron-builder"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.4.3",
+    "cors": "^2.8.5",
+    "electron-store": "^8.1.0",
+    "express": "^4.18.3",
+    "multer": "^1.4.5-lts.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.8",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/multer": "^1.4.11",
+    "@types/node": "^20.11.30",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^28.3.3",
+    "electron-builder": "^24.13.3",
+    "electron-rebuild": "^3.2.9",
+    "typescript": "^5.4.3",
+    "wait-on": "^7.2.0"
+  }
+}
