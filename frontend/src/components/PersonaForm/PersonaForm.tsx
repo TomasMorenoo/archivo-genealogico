@@ -8,6 +8,7 @@ interface Props {
   onSave: (data: Partial<Persona>) => void;
   onCancel: () => void;
   compact?: boolean;
+  extraSlot?: React.ReactNode;
 }
 
 function deriveTipo(dia: string, mes: string, anio: string, aprox: boolean): string {
@@ -17,7 +18,7 @@ function deriveTipo(dia: string, mes: string, anio: string, aprox: boolean): str
   return 'desconocida';
 }
 
-export default function PersonaForm({ initial = {}, onSave, onCancel, compact = false }: Props) {
+export default function PersonaForm({ initial = {}, onSave, onCancel, compact = false, extraSlot }: Props) {
   const [nacLugar, setNacLugar] = useState<Lugar | null>(initial.nac_lugar ?? null);
   const [defLugar, setDefLugar] = useState<Lugar | null>(initial.def_lugar ?? null);
   const [fallecida, setFallecida] = useState<boolean>(initial.fallecida ?? false);
@@ -140,6 +141,8 @@ export default function PersonaForm({ initial = {}, onSave, onCancel, compact = 
               </div>
             </>
           )}
+
+          {extraSlot}
 
           <div style={rowStyle}>
             <label>Historia</label>

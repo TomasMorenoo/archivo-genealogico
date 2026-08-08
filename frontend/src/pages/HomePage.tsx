@@ -87,29 +87,28 @@ export default function HomePage() {
 
       {showCreate && (
         <Modal title="Nueva Persona" onClose={closeCreate}>
-          <PersonaForm onSave={handleCreate} onCancel={closeCreate} />
-          <div style={{ borderTop: '1px solid #eee', marginTop: 16, paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={rowStyle}>
-              <label style={labelStyle}>Padre</label>
-              {padre
-                ? <div style={selectedStyle}>
-                    {padre.apellido}, {padre.nombre}
-                    <button onClick={() => setPadre(null)} style={clearBtn}>×</button>
-                  </div>
-                : <PersonaSearchInput defaultSexo="M" onSelect={setPadre} placeholder="Buscar o crear padre..." />
-              }
-            </div>
-            <div style={rowStyle}>
-              <label style={labelStyle}>Madre</label>
-              {madre
-                ? <div style={selectedStyle}>
-                    {madre.apellido}, {madre.nombre}
-                    <button onClick={() => setMadre(null)} style={clearBtn}>×</button>
-                  </div>
-                : <PersonaSearchInput defaultSexo="F" onSelect={setMadre} placeholder="Buscar o crear madre..." />
-              }
-            </div>
-          </div>
+          <PersonaForm
+            onSave={handleCreate}
+            onCancel={closeCreate}
+            extraSlot={
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={rowStyle}>
+                  <label style={labelStyle}>Padre</label>
+                  {padre
+                    ? <div style={selectedStyle}>{padre.apellido}, {padre.nombre}<button onClick={() => setPadre(null)} style={clearBtn}>×</button></div>
+                    : <PersonaSearchInput defaultSexo="M" onSelect={setPadre} placeholder="Buscar o crear padre..." />
+                  }
+                </div>
+                <div style={rowStyle}>
+                  <label style={labelStyle}>Madre</label>
+                  {madre
+                    ? <div style={selectedStyle}>{madre.apellido}, {madre.nombre}<button onClick={() => setMadre(null)} style={clearBtn}>×</button></div>
+                    : <PersonaSearchInput defaultSexo="F" onSelect={setMadre} placeholder="Buscar o crear madre..." />
+                  }
+                </div>
+              </div>
+            }
+          />
         </Modal>
       )}
     </div>
