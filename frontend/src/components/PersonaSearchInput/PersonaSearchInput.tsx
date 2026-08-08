@@ -41,7 +41,7 @@ export default function PersonaSearchInput({ label, excludeIds = [], onSelect, p
     return (
       <div style={{ padding: 12, background: '#f9f9f9', borderRadius: 6, border: '1px solid #ddd' }}>
         <p style={{ marginBottom: 10, fontSize: '0.85rem', color: '#666' }}>Crear nueva persona</p>
-        <PersonaForm initial={{ sexo: defaultSexo ?? 'M' }} onSave={handleCrearNueva} onCancel={() => setCreandoNueva(false)} />
+        <PersonaForm asDiv initial={{ sexo: defaultSexo ?? 'M' }} onSave={handleCrearNueva} onCancel={() => setCreandoNueva(false)} />
       </div>
     );
   }

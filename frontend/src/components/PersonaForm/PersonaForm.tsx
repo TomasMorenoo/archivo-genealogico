@@ -8,6 +8,7 @@ interface Props {
   onSave: (data: Partial<Persona>) => void;
   onCancel: () => void;
   compact?: boolean;
+  asDiv?: boolean;
   extraSlot?: (nacAnio: number | null) => React.ReactNode;
 }
 
@@ -18,7 +19,7 @@ function deriveTipo(dia: string, mes: string, anio: string, aprox: boolean): str
   return 'desconocida';
 }
 
-export default function PersonaForm({ initial = {}, onSave, onCancel, compact = false, extraSlot }: Props) {
+export default function PersonaForm({ initial = {}, onSave, onCancel, compact = false, asDiv = false, extraSlot }: Props) {
   const [nacLugar, setNacLugar] = useState<Lugar | null>(initial.nac_lugar ?? null);
   const [defLugar, setDefLugar] = useState<Lugar | null>(initial.def_lugar ?? null);
   const [fallecida, setFallecida] = useState<boolean>(initial.fallecida ?? false);
@@ -61,8 +62,9 @@ export default function PersonaForm({ initial = {}, onSave, onCancel, compact = 
     });
   }
 
+  const Tag = asDiv ? 'div' : 'form';
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <Tag {...(asDiv ? {} : { onSubmit: handleSubmit })} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={rowStyle}>
         <label>Nombre *</label>
         <input required value={form.nombre} onChange={e => set('nombre', e.target.value)} style={inputStyle} />
@@ -154,9 +156,9 @@ export default function PersonaForm({ initial = {}, onSave, onCancel, compact = 
 
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
         <button type="button" onClick={onCancel} style={btnSecondary}>Cancelar</button>
-        <button type="submit" style={btnPrimary}>Guardar</button>
+        <button type={asDiv ? 'button' : 'submit'} onClick={asDiv ? handleSubmit as any : undefined} style={btnPrimary}>Guardar</button>
       </div>
-    </form>
+    </Tag>
   );
 }
 
