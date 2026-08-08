@@ -78,9 +78,9 @@ export default function PersonaPage() {
       </nav>
 
       <header style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <code style={{ color: '#888', fontSize: '0.85rem' }}>{persona.pid}</code>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+          <div style={{ wordBreak: 'break-word', minWidth: 0, flex: '1 1 200px' }}>
+            <code style={{ color: '#555', fontSize: '0.85rem' }}>{persona.pid}</code>
             <h1 style={{ fontSize: '1.7rem', fontWeight: 700, marginTop: 2 }}>
               {persona.apellido}, {persona.nombre}
             </h1>
@@ -153,7 +153,7 @@ export default function PersonaPage() {
                           <Link to={`/persona/${rel.persona_destino_id}`} style={{ color: '#0070f3', flex: 1 }}>
                             {rel.persona_destino_nombre}
                           </Link>
-                          <span style={{ color: '#999', fontSize: '0.82rem' }}>({rel.persona_destino_pid})</span>
+                          <span style={{ color: '#666', fontSize: '0.82rem' }}>({rel.persona_destino_pid})</span>
                           <button onClick={() => handleDeleteRelacion(rel.id)} style={delBtn}>×</button>
                         </>
                       ) : (
@@ -191,7 +191,7 @@ export default function PersonaPage() {
                         <Link to={`/persona/${r.persona_destino_id}`} style={{ color: '#0070f3' }}>
                           {r.persona_destino_nombre}
                         </Link>
-                        <span style={{ color: '#999', marginLeft: 6, fontSize: '0.82rem' }}>
+                        <span style={{ color: '#666', marginLeft: 6, fontSize: '0.82rem' }}>
                           ({r.persona_destino_pid})
                         </span>
                       </div>
@@ -229,7 +229,7 @@ export default function PersonaPage() {
           ) : (
             persona.historia
               ? <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>{persona.historia}</p>
-              : <p style={{ color: '#999' }}>Sin historia registrada.{' '}
+              : <p style={{ color: '#666' }}>Sin historia registrada.{' '}
                   <button onClick={() => setEditingHistoria(true)} style={{ border: 'none', background: 'none', color: '#0070f3', cursor: 'pointer' }}>Agregar</button>
                 </p>
           )}
@@ -276,12 +276,12 @@ function calcEdad(
 }
 
 const card: React.CSSProperties = { background: '#fff', borderRadius: 8, padding: 20, marginBottom: 16, border: '1px solid #e8e8e8' };
-const sectionTitle: React.CSSProperties = { fontSize: '0.9rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#888', marginBottom: 12 };
+const sectionTitle: React.CSSProperties = { fontSize: '0.9rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#444', marginBottom: 12 };
 const labelCell: React.CSSProperties = { padding: '6px 0', width: 160, color: '#666', fontSize: '0.9rem', verticalAlign: 'top' };
 const valueCell: React.CSSProperties = { padding: '6px 0', fontWeight: 500 };
 const relItem: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f2f2f2' };
 const relTag: React.CSSProperties = { background: '#f0f0f0', padding: '2px 8px', borderRadius: 3, fontSize: '0.78rem', marginRight: 10, color: '#555' };
-const delBtn: React.CSSProperties = { border: 'none', background: 'none', color: '#bbb', cursor: 'pointer', fontSize: '1rem' };
+const delBtn: React.CSSProperties = { border: 'none', background: 'none', color: '#888', cursor: 'pointer', fontSize: '1rem' };
 const btnPrimary: React.CSSProperties = { background: '#1a1a1a', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 4, cursor: 'pointer', fontWeight: 600 };
 const btnSecondary: React.CSSProperties = { border: '1px solid #ccc', background: 'transparent', padding: '7px 14px', borderRadius: 4, cursor: 'pointer' };
 const btnDanger: React.CSSProperties = { border: '1px solid #fcc', background: '#fff5f5', color: '#c00', padding: '7px 14px', borderRadius: 4, cursor: 'pointer' };

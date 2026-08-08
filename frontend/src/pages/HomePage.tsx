@@ -58,14 +58,14 @@ export default function HomePage() {
         <p style={{ color: '#666', fontSize: '0.9rem' }}>{personas.length} personas registradas</p>
       </header>
 
-      <div style={{ display: 'flex', gap: 12, marginBottom: 16, alignItems: 'center' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
         <input
-          type="search" placeholder="Buscar por nombre o apellido..."
+          type="search" placeholder="Buscar..."
           value={search} onChange={e => setSearch(e.target.value)}
-          style={{ flex: 1, padding: '8px 12px', border: '1px solid #ccc', borderRadius: 4, fontSize: '0.95rem' }}
+          style={{ flex: '1 1 140px', padding: '8px 12px', border: '1px solid #ccc', borderRadius: 4, fontSize: '0.95rem' }}
         />
-        <button onClick={() => setShowCreate(true)} style={btnPrimary}>+ Nueva persona</button>
-        <div style={{ display: 'flex', gap: 6 }}>
+        <button onClick={() => setShowCreate(true)} style={btnPrimary}>+ Nueva</button>
+        <div style={{ display: 'flex', gap: 4 }}>
           {(['apellido', 'nac_anio', 'pid'] as const).map(k => (
             <button key={k} onClick={() => toggleSort(k)} style={{
               ...btnSmall,

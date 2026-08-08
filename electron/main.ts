@@ -30,8 +30,8 @@ function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
-    minWidth: 900,
-    minHeight: 600,
+    minWidth: 400,
+    minHeight: 500,
     title: 'Archivo Genealógico Familiar',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
