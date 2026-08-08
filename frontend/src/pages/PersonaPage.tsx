@@ -92,65 +92,34 @@ export default function PersonaPage() {
           <PersonaForm initial={persona} onSave={handleSave} onCancel={() => setEditing(false)} />
         </section>
       ) : (
-        <>
-          <section style={card}>
-            <h2 style={sectionTitle}>Datos Personales</h2>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <tbody>
-                {([
-                  ['Nombre', persona.nombre],
-                  ['Apellido', persona.apellido],
-                  ['Sexo', { M: 'Masculino', F: 'Femenino', otro: 'Otro' }[persona.sexo]],
-                  ['Estado', persona.fallecida ? 'Fallecido/a' : 'Vivo/a'],
-                  ['Nacimiento', nacimiento],
-                  ['Lugar nacimiento', persona.nac_lugar
-                    ? [persona.nac_lugar.ciudad, persona.nac_lugar.provincia, persona.nac_lugar.pais].filter(Boolean).join(', ')
+        <section style={card}>
+          <h2 style={sectionTitle}>Datos Personales</h2>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <tbody>
+              {([
+                ['Nombre', persona.nombre],
+                ['Apellido', persona.apellido],
+                ['Sexo', { M: 'Masculino', F: 'Femenino', otro: 'Otro' }[persona.sexo]],
+                ['Estado', persona.fallecida ? 'Fallecido/a' : 'Vivo/a'],
+                ['Nacimiento', nacimiento],
+                ['Lugar nacimiento', persona.nac_lugar
+                  ? [persona.nac_lugar.ciudad, persona.nac_lugar.provincia, persona.nac_lugar.pais].filter(Boolean).join(', ')
+                  : '—'],
+                ...(persona.fallecida ? [
+                  ['Defunción', defuncion + (edad ? ` (${edad})` : '')],
+                  ['Lugar defunción', persona.def_lugar
+                    ? [persona.def_lugar.ciudad, persona.def_lugar.provincia, persona.def_lugar.pais].filter(Boolean).join(', ')
                     : '—'],
-                  ...(persona.fallecida ? [
-                    ['Defunción', defuncion + (edad ? ` (${edad})` : '')],
-                    ['Lugar defunción', persona.def_lugar
-                      ? [persona.def_lugar.ciudad, persona.def_lugar.provincia, persona.def_lugar.pais].filter(Boolean).join(', ')
-                      : '—'],
-                  ] : []),
-                ] as [string, string][]).map(([label, val]) => (
-                  <tr key={label}>
-                    <td style={labelCell}>{label}</td>
-                    <td style={valueCell}>{val || '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-
-          <section style={card}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <h2 style={{ ...sectionTitle, marginBottom: 0 }}>Historia Personal</h2>
-              {!editingHistoria && (
-                <button onClick={() => setEditingHistoria(true)} style={btnSmall}>Editar</button>
-              )}
-            </div>
-            {editingHistoria ? (
-              <div>
-                <textarea
-                  value={historiaText}
-                  onChange={e => setHistoriaText(e.target.value)}
-                  rows={10}
-                  style={{ width: '100%', padding: 8, border: '1px solid #ccc', borderRadius: 4, fontSize: '0.95rem', resize: 'vertical' }}
-                />
-                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                  <button onClick={handleSaveHistoria} style={btnPrimary}>Guardar</button>
-                  <button onClick={() => { setEditingHistoria(false); setHistoriaText(persona.historia ?? ''); }} style={btnSecondary}>Cancelar</button>
-                </div>
-              </div>
-            ) : (
-              persona.historia
-                ? <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>{persona.historia}</p>
-                : <p style={{ color: '#999' }}>Sin historia registrada.{' '}
-                    <button onClick={() => setEditingHistoria(true)} style={{ border: 'none', background: 'none', color: '#0070f3', cursor: 'pointer' }}>Agregar</button>
-                  </p>
-            )}
-          </section>
-        </>
+                ] : []),
+              ] as [string, string][]).map(([label, val]) => (
+                <tr key={label}>
+                  <td style={labelCell}>{label}</td>
+                  <td style={valueCell}>{val || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
       )}
 
       <section style={card}>
@@ -163,6 +132,7 @@ export default function PersonaPage() {
           <div style={{ marginBottom: 16, padding: 16, background: '#f9f9f9', borderRadius: 6 }}>
             <RelacionForm
               personaId={numId}
+              personaSexo={persona.sexo}
               onSaved={() => { setAddingRelacion(false); loadRelaciones(); }}
               onCancel={() => setAddingRelacion(false)}
             />
@@ -191,6 +161,37 @@ export default function PersonaPage() {
           )
         }
       </section>
+
+      {!editing && (
+        <section style={card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <h2 style={{ ...sectionTitle, marginBottom: 0 }}>Historia Personal</h2>
+            {!editingHistoria && (
+              <button onClick={() => setEditingHistoria(true)} style={btnSmall}>Editar</button>
+            )}
+          </div>
+          {editingHistoria ? (
+            <div>
+              <textarea
+                value={historiaText}
+                onChange={e => setHistoriaText(e.target.value)}
+                rows={10}
+                style={{ width: '100%', padding: 8, border: '1px solid #ccc', borderRadius: 4, fontSize: '0.95rem', resize: 'vertical' }}
+              />
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button onClick={handleSaveHistoria} style={btnPrimary}>Guardar</button>
+                <button onClick={() => { setEditingHistoria(false); setHistoriaText(persona.historia ?? ''); }} style={btnSecondary}>Cancelar</button>
+              </div>
+            </div>
+          ) : (
+            persona.historia
+              ? <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>{persona.historia}</p>
+              : <p style={{ color: '#999' }}>Sin historia registrada.{' '}
+                  <button onClick={() => setEditingHistoria(true)} style={{ border: 'none', background: 'none', color: '#0070f3', cursor: 'pointer' }}>Agregar</button>
+                </p>
+          )}
+        </section>
+      )}
 
       <section style={card}>
         <DocumentoSection

@@ -8,9 +8,10 @@ interface Props {
   excludeIds?: number[];
   onSelect: (p: PersonaListItem) => void;
   placeholder?: string;
+  defaultSexo?: 'M' | 'F' | 'otro';
 }
 
-export default function PersonaSearchInput({ label, excludeIds = [], onSelect, placeholder = 'Buscar persona...' }: Props) {
+export default function PersonaSearchInput({ label, excludeIds = [], onSelect, placeholder = 'Buscar persona...', defaultSexo }: Props) {
   const [busqueda, setBusqueda] = useState('');
   const [resultados, setResultados] = useState<PersonaListItem[]>([]);
   const [creandoNueva, setCreandoNueva] = useState(false);
@@ -39,7 +40,7 @@ export default function PersonaSearchInput({ label, excludeIds = [], onSelect, p
     return (
       <div style={{ padding: 12, background: '#f9f9f9', borderRadius: 6, border: '1px solid #ddd' }}>
         <p style={{ marginBottom: 10, fontSize: '0.85rem', color: '#666' }}>Crear nueva persona</p>
-        <PersonaForm onSave={handleCrearNueva} onCancel={() => setCreandoNueva(false)} />
+        <PersonaForm initial={{ sexo: defaultSexo ?? 'M' }} onSave={handleCrearNueva} onCancel={() => setCreandoNueva(false)} />
       </div>
     );
   }

@@ -3,21 +3,40 @@ import { relacionesApi } from '../../api/client';
 import type { TipoRelacion, PersonaListItem } from '../../types';
 import PersonaSearchInput from '../PersonaSearchInput/PersonaSearchInput';
 
+const TIPO_SEXO: Record<string, 'M' | 'F'> = {
+  'Padre': 'M', 'Padre biológico': 'M', 'Padre adoptivo': 'M', 'Abuelo': 'M', 'Bisabuelo': 'M',
+  'Hermano': 'M', 'Hermano medio': 'M', 'Hijo': 'M',
+  'Madre': 'F', 'Madre biológica': 'F', 'Madre adoptiva': 'F', 'Abuela': 'F', 'Bisabuela': 'F',
+  'Hermana': 'F', 'Hija': 'F',
+};
+
+function calcDefaultSexo(nombreTipo: string, personaSexo: 'M' | 'F' | 'otro'): 'M' | 'F' | 'otro' {
+  if (nombreTipo === 'Cónyuge') {
+    return personaSexo === 'M' ? 'F' : personaSexo === 'F' ? 'M' : 'M';
+  }
+  return TIPO_SEXO[nombreTipo] ?? 'M';
+}
+
 interface Props {
   personaId: number;
+  personaSexo: 'M' | 'F' | 'otro';
   onSaved: () => void;
   onCancel: () => void;
 }
 
-export default function RelacionForm({ personaId, onSaved, onCancel }: Props) {
+export default function RelacionForm({ personaId, personaSexo, onSaved, onCancel }: Props) {
   const [tipos, setTipos] = useState<TipoRelacion[]>([]);
   const [tipoId, setTipoId] = useState('');
   const [seleccionada, setSeleccionada] = useState<PersonaListItem | null>(null);
+  const [defaultSexo, setDefaultSexo] = useState<'M' | 'F' | 'otro'>('M');
 
   useEffect(() => {
     relacionesApi.tipos().then(t => {
       setTipos(t);
-      if (t.length > 0) setTipoId(String(t[0].id));
+      if (t.length > 0) {
+        setTipoId(String(t[0].id));
+        setDefaultSexo(calcDefaultSexo(t[0].nombre, personaSexo));
+      }
     });
   }, []);
 
@@ -35,7 +54,12 @@ export default function RelacionForm({ personaId, onSaved, onCancel }: Props) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <label style={{ fontSize: '0.85rem', color: '#555' }}>Tipo de relación</label>
-        <select value={tipoId} onChange={e => setTipoId(e.target.value)} style={inp}>
+        <select value={tipoId} onChange={e => {
+          const id = e.target.value;
+          setTipoId(id);
+          const tipo = tipos.find(t => String(t.id) === id);
+          if (tipo) setDefaultSexo(calcDefaultSexo(tipo.nombre, personaSexo));
+        }} style={inp}>
           {tipos.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
         </select>
       </div>
@@ -44,6 +68,7 @@ export default function RelacionForm({ personaId, onSaved, onCancel }: Props) {
         label="Persona relacionada"
         excludeIds={[personaId]}
         onSelect={setSeleccionada}
+        defaultSexo={defaultSexo}
       />
 
       {seleccionada && (

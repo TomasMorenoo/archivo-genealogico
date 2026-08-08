@@ -1,17 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
-import { personasApi } from '../api/client';
+import { personasApi, relacionesApi } from '../api/client';
 import type { Persona, PersonaListItem } from '../types';
-
 import PersonaList from '../components/PersonaList/PersonaList';
 import PersonaForm from '../components/PersonaForm/PersonaForm';
+import PersonaSearchInput from '../components/PersonaSearchInput/PersonaSearchInput';
 
 export default function HomePage() {
   const [personas, setPersonas] = useState<PersonaListItem[]>([]);
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
-  const [sortKey, setSortKey] = useState<'apellido' | 'nac_anio' | 'pid'>('apellido');
+  const [sortKey, setSortKey] = useState<'apellido' | 'nac_anio' | 'pid'>('pid');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [version, setVersion] = useState<string>('');
+  const [padre, setPadre] = useState<PersonaListItem | null>(null);
+  const [madre, setMadre] = useState<PersonaListItem | null>(null);
 
   const load = useCallback(async () => {
     const data = await personasApi.list(search || undefined);
@@ -30,9 +32,17 @@ export default function HomePage() {
     return sortDir === 'asc' ? cmp : -cmp;
   });
 
-  async function handleCreate(data: Partial<Persona>) {
-    await personasApi.create(data);
+  function closeCreate() {
     setShowCreate(false);
+    setPadre(null);
+    setMadre(null);
+  }
+
+  async function handleCreate(data: Partial<Persona>) {
+    const created = await personasApi.create(data);
+    if (padre) await relacionesApi.add({ persona_origen_id: created.id, tipo_relacion_id: 1, persona_destino_id: padre.id });
+    if (madre) await relacionesApi.add({ persona_origen_id: created.id, tipo_relacion_id: 2, persona_destino_id: madre.id });
+    closeCreate();
     load();
   }
 
@@ -76,8 +86,30 @@ export default function HomePage() {
       )}
 
       {showCreate && (
-        <Modal title="Nueva Persona" onClose={() => setShowCreate(false)}>
-          <PersonaForm onSave={handleCreate} onCancel={() => setShowCreate(false)} />
+        <Modal title="Nueva Persona" onClose={closeCreate}>
+          <PersonaForm onSave={handleCreate} onCancel={closeCreate} />
+          <div style={{ borderTop: '1px solid #eee', marginTop: 16, paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={rowStyle}>
+              <label style={labelStyle}>Padre</label>
+              {padre
+                ? <div style={selectedStyle}>
+                    {padre.apellido}, {padre.nombre}
+                    <button onClick={() => setPadre(null)} style={clearBtn}>×</button>
+                  </div>
+                : <PersonaSearchInput defaultSexo="M" onSelect={setPadre} placeholder="Buscar o crear padre..." />
+              }
+            </div>
+            <div style={rowStyle}>
+              <label style={labelStyle}>Madre</label>
+              {madre
+                ? <div style={selectedStyle}>
+                    {madre.apellido}, {madre.nombre}
+                    <button onClick={() => setMadre(null)} style={clearBtn}>×</button>
+                  </div>
+                : <PersonaSearchInput defaultSexo="F" onSelect={setMadre} placeholder="Buscar o crear madre..." />
+              }
+            </div>
+          </div>
         </Modal>
       )}
     </div>
@@ -102,3 +134,7 @@ const overlay: React.CSSProperties = { position: 'fixed', inset: 0, background: 
 const dialog: React.CSSProperties = { background: '#fff', borderRadius: 8, padding: 24, width: '100%', maxWidth: 500, maxHeight: '90vh', overflowY: 'auto' };
 const btnPrimary: React.CSSProperties = { background: '#1a1a1a', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 4, cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' };
 const btnSmall: React.CSSProperties = { border: 'none', padding: '6px 10px', borderRadius: 4, cursor: 'pointer', fontSize: '0.8rem' };
+const rowStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4 };
+const labelStyle: React.CSSProperties = { fontSize: '0.85rem', color: '#555', fontWeight: 600 };
+const selectedStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: '#f0f9ff', borderRadius: 4, fontSize: '0.9rem' };
+const clearBtn: React.CSSProperties = { border: 'none', background: 'none', cursor: 'pointer', color: '#c00', fontSize: '1rem', lineHeight: 1 };
