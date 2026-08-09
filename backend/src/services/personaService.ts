@@ -1,5 +1,6 @@
 import { getDb } from '../db/database';
 import type { Persona, PersonaListItem } from '../types';
+import { deletePersonaFolder, renumberPersonaFolders } from './fileSystemService';
 
 export function formatPid(id: number): string {
   return `P${String(id).padStart(5, '0')}`;
@@ -119,6 +120,7 @@ export function updatePersona(id: number, input: Partial<CreatePersonaInput>): P
 
 export function deletePersona(id: number): void {
   const db = getDb();
+  const persona = getPersona(id);
   db.pragma('foreign_keys = OFF');
   db.transaction(() => {
     // Delete cascaded rows manually
@@ -136,4 +138,6 @@ export function deletePersona(id: number): void {
     db.prepare("UPDATE sqlite_sequence SET seq = seq - 1 WHERE name = 'personas'").run();
   })();
   db.pragma('foreign_keys = ON');
+  if (persona) deletePersonaFolder(persona);
+  renumberPersonaFolders(id);
 }

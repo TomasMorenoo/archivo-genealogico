@@ -141,3 +141,35 @@ export function writePersonaMd(
 export function getDocumentosPath(persona: { id: number; nombre: string; apellido: string }): string {
   return path.join(personaFolderPath(persona), 'Documentos');
 }
+
+export function deletePersonaFolder(persona: { id: number; nombre: string; apellido: string }): void {
+  const folderPath = personaFolderPath(persona);
+  if (fs.existsSync(folderPath)) {
+    fs.rmSync(folderPath, { recursive: true, force: true });
+  }
+}
+
+export function renumberPersonaFolders(fromId: number): void {
+  const personasDir = path.join(getDataRoot(), 'Personas');
+  if (!fs.existsSync(personasDir)) return;
+
+  const entries = fs.readdirSync(personasDir);
+  // Find folders with id > fromId, sort ascending so we rename P(n+1)→Pn without conflicts
+  const toRename: { oldPath: string; newPath: string }[] = [];
+  for (const entry of entries) {
+    const match = entry.match(/^P(\d+)_(.+)$/);
+    if (!match) continue;
+    const folderId = Number(match[1]);
+    if (folderId > fromId) {
+      const newName = `P${String(folderId - 1).padStart(5, '0')}_${match[2]}`;
+      toRename.push({
+        oldPath: path.join(personasDir, entry),
+        newPath: path.join(personasDir, newName),
+      });
+    }
+  }
+  toRename.sort((a, b) => a.oldPath.localeCompare(b.oldPath));
+  for (const { oldPath, newPath } of toRename) {
+    if (fs.existsSync(oldPath)) fs.renameSync(oldPath, newPath);
+  }
+}
