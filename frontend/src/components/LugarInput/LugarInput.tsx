@@ -91,13 +91,13 @@ export default function LugarInput({ value, onChange, placeholder = 'Ciudad, pro
         <div style={{ marginTop: 8, padding: 12, background: '#f9f9f9', borderRadius: 6, border: '1px solid #ddd' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <input type="text" placeholder="Ciudad / Localidad" value={newCiudad} onChange={e => setNewCiudad(e.target.value)} style={inp} />
-            <input type="text" placeholder="Provincia *" value={newProvincia} onChange={e => setNewProvincia(e.target.value)} style={inp} />
+            <input type="text" placeholder="Provincia" value={newProvincia} onChange={e => setNewProvincia(e.target.value)} style={inp} />
             <input type="text" placeholder="País *" value={newPais} onChange={e => setNewPais(e.target.value)} style={inp} />
             <div style={{ display: 'flex', gap: 6 }}>
               <button
                 type="button"
                 onClick={handleCreateLugar}
-                disabled={!newProvincia || !newPais}
+                disabled={!newPais}
                 style={{ ...btnPrimary, fontSize: '0.85rem', padding: '5px 12px' }}>
                 Guardar lugar
               </button>
