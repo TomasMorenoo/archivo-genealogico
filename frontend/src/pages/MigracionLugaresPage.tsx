@@ -179,12 +179,6 @@ export default function MigracionLugaresPage() {
         </div>
       )}
 
-      {done && (
-        <div style={{ marginTop: 16, padding: '10px 14px', background: '#e6f4ea', border: '1px solid #b7dfbf', borderRadius: 6, color: '#2d6a3f', fontWeight: 600 }}>
-          Listo — cambios aplicados.
-        </div>
-      )}
-
       {items && !loading && (
         <>
           <div style={{ marginTop: 24, overflowX: 'auto' }}>
@@ -260,13 +254,17 @@ export default function MigracionLugaresPage() {
             </table>
           </div>
 
-          {selected.size > 0 && (
-            <div style={{ marginTop: 16 }}>
+          <div style={{ marginTop: 16 }}>
+            {done ? (
+              <div style={{ padding: '10px 14px', background: '#e6f4ea', border: '1px solid #b7dfbf', borderRadius: 6, color: '#2d6a3f', fontWeight: 600 }}>
+                Listo — cambios aplicados.
+              </div>
+            ) : selected.size > 0 ? (
               <button type="button" onClick={aplicar} disabled={applying} style={btnPrimary}>
                 {applying ? 'Aplicando...' : `Aplicar seleccionados (${selected.size})`}
               </button>
-            </div>
-          )}
+            ) : null}
+          </div>
         </>
       )}
     </div>
