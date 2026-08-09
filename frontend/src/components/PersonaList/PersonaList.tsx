@@ -54,7 +54,7 @@ export default function PersonaList({ personas }: Props) {
               <td className="col-fecha" style={tdStyle}>{formatFechaCorta(p.nac_dia, p.nac_mes, p.nac_anio, p.nac_tipo)}</td>
               <td className="col-estado" style={tdStyle}>
                 {p.fallecida
-                  ? <span style={{ color: '#666' }}>{formatFechaCorta(p.def_dia, p.def_mes, p.def_anio, p.def_tipo)}</span>
+                  ? <span style={{ color: '#666' }}>{p.def_anio ? formatFechaCorta(p.def_dia, p.def_mes, p.def_anio, p.def_tipo) : 'Fallecido/a'}</span>
                   : <span style={{ color: '#2a9d2a', fontWeight: 500 }}>Vivo/a</span>
                 }
               </td>
