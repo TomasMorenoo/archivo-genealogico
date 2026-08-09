@@ -62,19 +62,13 @@ lugaresRouter.get('/migrate', async (_req, res) => {
 });
 
 lugaresRouter.post('/migrate', async (req, res) => {
-  const { ids } = req.body as { ids: number[] };
-  if (!Array.isArray(ids)) return res.status(400).json({ error: 'ids required' });
+  const { items } = req.body as {
+    items: Array<{ id: number; ciudad: string; provincia: string | null; pais: string; lat: number; lon: number }>;
+  };
+  if (!Array.isArray(items)) return res.status(400).json({ error: 'items required' });
   try {
-    const lugares = getAllLugares();
-    for (const id of ids) {
-      const l = lugares.find(x => x.id === id);
-      if (!l) continue;
-      const query = `${l.ciudad} ${l.provincia ?? ''} ${l.pais}`.trim();
-      const hits = await nominatimSearch(query);
-      if (hits.length > 0) {
-        updateLugarById(id, { ciudad: hits[0].ciudad, provincia: hits[0].provincia, pais: hits[0].pais, latitud: hits[0].lat, longitud: hits[0].lon });
-      }
-      await sleep(1100);
+    for (const item of items) {
+      updateLugarById(item.id, { ciudad: item.ciudad, provincia: item.provincia, pais: item.pais, latitud: item.lat, longitud: item.lon });
     }
     res.json({ ok: true });
   } catch (e: any) {
