@@ -6,6 +6,7 @@ export interface ChangelogSection {
 export interface ChangelogEntry {
   id: number;
   label: string; // short label shown in nav, e.g. "v1.0.35" or "Ago 2026"
+  channel?: 'stable' | 'beta'; // default = 'stable'
   sections: ChangelogSection[];
 }
 
@@ -72,6 +73,24 @@ export const CHANGELOG: ChangelogEntry[] = [
         items: [
           'Este cartel ahora es dinámico: cada actualización muestra exactamente qué cambió.',
           'Flechitas ← → para navegar entre versiones anteriores sin perderte nada.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 3,
+    label: 'Beta – Árbol v1.1',
+    channel: 'beta',
+    sections: [
+      {
+        title: 'Árbol genealógico',
+        items: [
+          'Nueva sección: árbol de ancestros hasta 5 generaciones.',
+          'Vista vertical (de abajo para arriba) y horizontal.',
+          'Alternás entre árbol biológico y adoptivo.',
+          'Tarjetas con nombre, apellido y fechas de vida.',
+          'Botón Imprimir: exportá el árbol a A4, A3, A2, A1 o A0.',
+          'La raíz seleccionada y las preferencias de vista se recuerdan entre sesiones.',
         ],
       },
     ],

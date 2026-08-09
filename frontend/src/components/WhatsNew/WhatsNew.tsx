@@ -3,13 +3,15 @@ import { CHANGELOG } from '../../data/changelog';
 
 interface Props {
   lastSeenId: number; // 0 = show all (from menu)
+  channel: 'stable' | 'beta';
   onClose: () => void;
 }
 
-export default function WhatsNew({ lastSeenId, onClose }: Props) {
+export default function WhatsNew({ lastSeenId, channel, onClose }: Props) {
+  const channelLog = CHANGELOG.filter(e => (e.channel ?? 'stable') === channel);
   const entries = lastSeenId === 0
-    ? [...CHANGELOG].reverse()
-    : [...CHANGELOG].filter(e => e.id > lastSeenId).reverse();
+    ? [...channelLog].reverse()
+    : [...channelLog].filter(e => e.id > lastSeenId).reverse();
 
   const [idx, setIdx] = useState(0); // 0 = most recent
 
