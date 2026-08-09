@@ -14,6 +14,49 @@ const CFG_VIEW = 'arbol_view';
 type Orientation = 'horizontal' | 'vertical';
 type View = 'bio' | 'adoptivo';
 
+const PAPER_SIZES = [
+  { label: 'A4  (210 × 297 mm)',  w: 210,  h: 297,  css: 'A4'  },
+  { label: 'A3  (297 × 420 mm)',  w: 297,  h: 420,  css: 'A3'  },
+  { label: 'A2  (420 × 594 mm)',  w: 420,  h: 594,  css: 'A2'  },
+  { label: 'A1  (594 × 841 mm)',  w: 594,  h: 841,  css: 'A1'  },
+  { label: 'A0  (841 × 1189 mm)', w: 841,  h: 1189, css: 'A0'  },
+] as const;
+
+function printTree(wMm: number, hMm: number, cssSize: string) {
+  const el = document.getElementById('arbol-tree-content');
+  if (!el) return;
+
+  const treeW = el.scrollWidth;
+  const treeH = el.scrollHeight;
+  const margin = 15; // mm
+  const mmToPx = 96 / 25.4;
+
+  const fit = (pw: number, ph: number) =>
+    Math.min((pw - 2 * margin) * mmToPx / treeW, (ph - 2 * margin) * mmToPx / treeH);
+
+  const scalePortrait  = fit(wMm, hMm);
+  const scaleLandscape = fit(hMm, wMm);
+  const useLandscape   = scaleLandscape > scalePortrait;
+  const scale          = useLandscape ? scaleLandscape : scalePortrait;
+  const orient         = useLandscape ? 'landscape' : 'portrait';
+
+  const win = window.open('', '_blank', 'width=900,height=700');
+  if (!win) return;
+
+  win.document.write(`<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+  @page { size: ${cssSize} ${orient}; margin: ${margin}mm; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+  .wrap { transform: scale(${scale}); transform-origin: top left;
+          width: ${treeW}px; height: ${treeH}px; display: inline-block; }
+</style></head><body>
+<div class="wrap">${el.innerHTML}</div>
+<script>window.onload=function(){window.print();window.close();}<\/script>
+</body></html>`);
+  win.document.close();
+}
+
 function fmtDate(dia: number | null, mes: number | null, anio: number | null, tipo: string): string {
   if (tipo === 'desconocida') return '';
   if (tipo === 'aproximada' && anio) return `≈${anio}`;
@@ -127,6 +170,7 @@ export default function ArbolPage() {
   const [loading, setLoading] = useState(false);
   const [orientation, setOrientation] = useState<Orientation>('vertical');
   const [view, setView] = useState<View>('bio');
+  const [showPrint, setShowPrint] = useState(false);
 
   async function loadTree(id: number, v: View) {
     setLoading(true);
@@ -204,6 +248,20 @@ export default function ArbolPage() {
               <button style={{ ...toggleBtn, ...(orientation === 'horizontal' ? toggleActive : {}) }} onClick={() => changeOrientation('horizontal')} title="Horizontal">↔</button>
               <button style={{ ...toggleBtn, ...(orientation === 'vertical' ? toggleActive : {}) }} onClick={() => changeOrientation('vertical')} title="Vertical">↕</button>
             </div>
+            <div style={{ position: 'relative' }}>
+              <button style={printBtn} onClick={() => setShowPrint(s => !s)}>Imprimir</button>
+              {showPrint && (
+                <div style={printDropdown}>
+                  <p style={{ margin: '0 0 8px', fontSize: '0.78rem', color: '#888', fontWeight: 600 }}>Tamaño de hoja</p>
+                  {PAPER_SIZES.map(p => (
+                    <button key={p.css} style={printOption}
+                      onClick={() => { setShowPrint(false); printTree(p.w, p.h, p.css); }}>
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -228,7 +286,7 @@ export default function ArbolPage() {
             <button onClick={handleCambiar} style={changeBtn}>Cambiar</button>
           </div>
           <div style={{ overflowX: 'auto', overflowY: 'auto', paddingBottom: 24 }}>
-            <div style={{ display: 'inline-block', padding: '16px 8px' }}>
+            <div id="arbol-tree-content" style={{ display: 'inline-block', padding: '16px 8px' }}>
               {orientation === 'horizontal'
                 ? <HBranch node={root} gen={1} navigate={goTo} />
                 : <VBranch node={root} gen={1} navigate={goTo} />
@@ -257,3 +315,15 @@ const changeBtn: React.CSSProperties = { background: 'none', border: '1px solid 
 const toggleGroup: React.CSSProperties = { display: 'flex', border: '1px solid #ddd', borderRadius: 4, overflow: 'hidden' };
 const toggleBtn: React.CSSProperties = { border: 'none', background: '#f5f5f5', cursor: 'pointer', padding: '5px 11px', fontSize: '0.82rem', color: '#555' };
 const toggleActive: React.CSSProperties = { background: '#1a1a1a', color: '#fff' };
+const printBtn: React.CSSProperties = { border: '1px solid #ddd', background: '#f5f5f5', cursor: 'pointer', padding: '5px 11px', borderRadius: 4, fontSize: '0.82rem', color: '#555' };
+const printDropdown: React.CSSProperties = {
+  position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 50,
+  background: '#fff', border: '1px solid #ddd', borderRadius: 6,
+  boxShadow: '0 4px 16px rgba(0,0,0,0.12)', padding: '10px 12px',
+  display: 'flex', flexDirection: 'column', gap: 4, minWidth: 210,
+};
+const printOption: React.CSSProperties = {
+  border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left',
+  padding: '6px 8px', borderRadius: 4, fontSize: '0.82rem', color: '#333',
+  fontFamily: 'monospace',
+};
