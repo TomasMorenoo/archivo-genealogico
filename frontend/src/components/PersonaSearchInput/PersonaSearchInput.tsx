@@ -10,9 +10,10 @@ interface Props {
   placeholder?: string;
   defaultSexo?: 'M' | 'F' | 'otro';
   maxNacAnio?: number | null;
+  allowCreate?: boolean;
 }
 
-export default function PersonaSearchInput({ label, excludeIds = [], onSelect, placeholder = 'Buscar persona...', defaultSexo, maxNacAnio }: Props) {
+export default function PersonaSearchInput({ label, excludeIds = [], onSelect, placeholder = 'Buscar persona...', defaultSexo, maxNacAnio, allowCreate = true }: Props) {
   const [busqueda, setBusqueda] = useState('');
   const [resultados, setResultados] = useState<PersonaListItem[]>([]);
   const [creandoNueva, setCreandoNueva] = useState(false);
@@ -63,9 +64,11 @@ export default function PersonaSearchInput({ label, excludeIds = [], onSelect, p
               {p.apellido}, {p.nombre}{p.nac_anio ? ` (${p.nac_anio})` : ''}
             </div>
           ))}
-          <div style={{ ...item, color: '#0070f3', fontWeight: 600 }} onClick={() => setCreandoNueva(true)}>
-            + Crear nueva persona
-          </div>
+          {allowCreate && (
+            <div style={{ ...item, color: '#0070f3', fontWeight: 600 }} onClick={() => setCreandoNueva(true)}>
+              + Crear nueva persona
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -11,6 +11,7 @@ const personas_1 = require("./routes/personas");
 const relaciones_1 = require("./routes/relaciones");
 const documentos_1 = require("./routes/documentos");
 const lugares_1 = require("./routes/lugares");
+const archivos_1 = require("./routes/archivos");
 function createApp() {
     const app = (0, express_1.default)();
     app.use((0, cors_1.default)());
@@ -20,5 +21,6 @@ function createApp() {
     app.use('/api/relaciones', relaciones_1.relacionesRouter);
     app.use('/api/documentos', documentos_1.documentosRouter);
     app.use('/api/lugares', lugares_1.lugaresRouter);
+    app.use('/api/archivos', archivos_1.archivosRouter);
     return app;
 }

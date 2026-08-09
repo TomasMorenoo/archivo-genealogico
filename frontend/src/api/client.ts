@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { PersonaListItem, Persona, Relacion, TipoRelacion, Documento, Lugar } from '../types';
+import type { PersonaListItem, Persona, Relacion, TipoRelacion, Documento, Lugar, AncestorNode } from '../types';
 
 const api = axios.create({ baseURL: 'http://localhost:3001/api' });
 
@@ -14,6 +14,8 @@ export const personasApi = {
     api.put<Persona>(`/personas/${id}`, data).then(r => r.data),
   delete: (id: number) =>
     api.delete(`/personas/${id}`),
+  ancestros: (id: number, generaciones = 5) =>
+    api.get<AncestorNode>(`/personas/${id}/ancestros`, { params: { generaciones } }).then(r => r.data),
 };
 
 export const relacionesApi = {

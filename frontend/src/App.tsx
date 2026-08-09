@@ -4,6 +4,7 @@ import HomePage from './pages/HomePage';
 import PersonaPage from './pages/PersonaPage';
 import SetupPage from './pages/SetupPage';
 import MigracionLugaresPage from './pages/MigracionLugaresPage';
+import ArbolPage from './pages/ArbolPage';
 import WhatsNew from './components/WhatsNew/WhatsNew';
 
 function NavigationHandler() {
@@ -47,6 +48,7 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/persona/:id" element={<PersonaPage />} />
         <Route path="/migracion-lugares" element={<MigracionLugaresPage />} />
+        <Route path="/arbol" element={<ArbolPage />} />
       </Routes>
       {whatsNew && <WhatsNew version={whatsNew.version} onClose={() => setWhatsNew(null)} />}
     </>

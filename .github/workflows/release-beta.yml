@@ -1,0 +1,45 @@
+name: Release Beta
+
+on:
+  push:
+    branches: [beta]
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Set version
+        run: |
+          $newVersion = "1.1.0-beta.${{ github.run_number }}"
+          $content = Get-Content package.json -Raw
+          $content = $content -replace '"version": ".*?"', """version"": ""$newVersion"""
+          Set-Content package.json $content
+          echo "Version: $newVersion"
+        shell: pwsh
+
+      - name: Install root dependencies
+        run: npm install
+
+      - name: Install backend dependencies
+        run: npm install
+        working-directory: backend
+
+      - name: Install frontend dependencies
+        run: npm install
+        working-directory: frontend
+
+      - name: Build
+        run: npm run build
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: npx electron-builder --config electron-builder.beta.yml --win --x64 --publish always

@@ -17,7 +17,8 @@ function getRelacionesDePersona(personaId) {
       r.tipo_relacion_id,
       tr.nombre as tipo_relacion_nombre,
       r.persona_destino_id,
-      (p.apellido || ', ' || p.nombre) as persona_destino_nombre
+      (p.apellido || ', ' || p.nombre) as persona_destino_nombre,
+      p.nac_anio as persona_destino_nac_anio
     FROM relaciones r
     JOIN tipo_relacion tr ON r.tipo_relacion_id = tr.id
     JOIN personas p ON r.persona_destino_id = p.id
@@ -55,6 +56,26 @@ function resolveInverso(inversoId, sexo) {
         return f ? 16 : 15;
     return inversoId;
 }
+// Tipos que implican relación padre→hijo (origen=hijo, destino=padre)
+const PARENT_TIPOS = new Set([1, 2, 6, 7, 8, 9]);
+// Tipos que implican relación padre→hijo (origen=padre, destino=hijo)
+const CHILD_TIPOS = new Set([3, 4]);
+function getSexo(db, id) {
+    return db.prepare('SELECT sexo FROM personas WHERE id = ?').get(id)?.sexo ?? 'M';
+}
+function insertHermanos(db, parentId, newChildId) {
+    const hermanos = db.prepare(`
+    SELECT persona_destino_id as id FROM relaciones
+    WHERE persona_origen_id = ? AND tipo_relacion_id IN (3, 4) AND persona_destino_id != ?
+  `).all(parentId, newChildId);
+    const ins = db.prepare('INSERT OR IGNORE INTO relaciones (persona_origen_id, tipo_relacion_id, persona_destino_id) VALUES (?, ?, ?)');
+    const newChildSexo = getSexo(db, newChildId);
+    for (const h of hermanos) {
+        const hSexo = getSexo(db, h.id);
+        ins.run(newChildId, hSexo === 'F' ? 11 : 10, h.id);
+        ins.run(h.id, newChildSexo === 'F' ? 11 : 10, newChildId);
+    }
+}
 function addRelacion(personaOrigenId, tipoRelacionId, personaDestinoId) {
     const db = (0, database_1.getDb)();
     const tipo = db.prepare('SELECT * FROM tipo_relacion WHERE id = ?').get(tipoRelacionId);
@@ -70,6 +91,13 @@ function addRelacion(personaOrigenId, tipoRelacionId, personaDestinoId) {
             const origen = db.prepare('SELECT sexo FROM personas WHERE id = ?').get(personaOrigenId);
             const inversoId = resolveInverso(tipo.inverso_id, origen?.sexo ?? 'M');
             insertRelacion.run(personaDestinoId, inversoId, personaOrigenId);
+        }
+        // Auto-crear relaciones de hermanos
+        if (PARENT_TIPOS.has(tipoRelacionId)) {
+            insertHermanos(db, personaDestinoId, personaOrigenId);
+        }
+        else if (CHILD_TIPOS.has(tipoRelacionId)) {
+            insertHermanos(db, personaOrigenId, personaDestinoId);
         }
     })();
 }

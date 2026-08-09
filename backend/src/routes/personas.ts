@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import {
-  listPersonas, getPersona, createPersona, updatePersona, deletePersona
+  listPersonas, getPersona, createPersona, updatePersona, deletePersona, getAncestros
 } from '../services/personaService';
 import { getRelacionesDePersona } from '../services/relacionService';
 import {
@@ -25,6 +25,13 @@ personasRouter.get('/', (req, res) => {
   const search = typeof req.query.q === 'string' ? req.query.q : undefined;
   const maxNacAnio = typeof req.query.max_nac_anio === 'string' ? Number(req.query.max_nac_anio) : undefined;
   res.json(listPersonas(search, maxNacAnio));
+});
+
+personasRouter.get('/:id/ancestros', (req, res) => {
+  const generaciones = Math.min(Number(req.query.generaciones) || 5, 8);
+  const tree = getAncestros(Number(req.params.id), generaciones);
+  if (!tree) return res.status(404).json({ error: 'No encontrada' });
+  res.json(tree);
 });
 
 personasRouter.get('/:id', (req, res) => {

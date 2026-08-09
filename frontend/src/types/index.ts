@@ -78,6 +78,16 @@ export interface DocumentoPersona {
   rol: 'principal' | 'mencionada';
 }
 
+export interface AncestorNode {
+  id: number;
+  nombre: string;
+  apellido: string;
+  nac_anio: number | null;
+  sexo: string;
+  padre?: AncestorNode;
+  madre?: AncestorNode;
+}
+
 export interface Documento {
   id: number;
   did: string;

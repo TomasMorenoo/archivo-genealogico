@@ -7,18 +7,26 @@ exports.createPersona = createPersona;
 exports.updatePersona = updatePersona;
 exports.deletePersona = deletePersona;
 const database_1 = require("../db/database");
+const fileSystemService_1 = require("./fileSystemService");
 function formatPid(id) {
     return `P${String(id).padStart(5, '0')}`;
 }
-function listPersonas(search) {
+function listPersonas(search, maxNacAnio) {
     const db = (0, database_1.getDb)();
     let query = `SELECT id, nombre, apellido, nac_dia, nac_mes, nac_anio, nac_tipo, def_dia, def_mes, def_anio, def_tipo, fallecida FROM personas`;
+    const conditions = [];
     const params = [];
     if (search) {
-        query += ` WHERE nombre LIKE ? OR apellido LIKE ? OR (apellido || ', ' || nombre) LIKE ?`;
+        conditions.push(`(nombre LIKE ? OR apellido LIKE ? OR (apellido || ', ' || nombre) LIKE ?)`);
         const s = `%${search}%`;
         params.push(s, s, s);
     }
+    if (maxNacAnio) {
+        conditions.push(`(nac_anio IS NULL OR nac_anio < ?)`);
+        params.push(maxNacAnio);
+    }
+    if (conditions.length)
+        query += ` WHERE ` + conditions.join(' AND ');
     query += ` ORDER BY apellido, nombre`;
     const rows = db.prepare(query).all(...params);
     return rows.map(r => ({ ...r, pid: formatPid(r.id), fallecida: !!r.fallecida }));
@@ -93,5 +101,25 @@ function updatePersona(id, input) {
     return getPersona(id);
 }
 function deletePersona(id) {
-    (0, database_1.getDb)().prepare('DELETE FROM personas WHERE id = ?').run(id);
+    const db = (0, database_1.getDb)();
+    const persona = getPersona(id);
+    db.pragma('foreign_keys = OFF');
+    db.transaction(() => {
+        // Delete cascaded rows manually
+        db.prepare('DELETE FROM relaciones WHERE persona_origen_id = ? OR persona_destino_id = ?').run(id, id);
+        db.prepare('DELETE FROM documento_personas WHERE persona_id = ?').run(id);
+        db.prepare('DELETE FROM eventos WHERE persona_id = ?').run(id);
+        db.prepare('DELETE FROM personas WHERE id = ?').run(id);
+        // Renumber all ids above the deleted one
+        db.prepare('UPDATE relaciones SET persona_origen_id = persona_origen_id - 1 WHERE persona_origen_id > ?').run(id);
+        db.prepare('UPDATE relaciones SET persona_destino_id = persona_destino_id - 1 WHERE persona_destino_id > ?').run(id);
+        db.prepare('UPDATE documento_personas SET persona_id = persona_id - 1 WHERE persona_id > ?').run(id);
+        db.prepare('UPDATE eventos SET persona_id = persona_id - 1 WHERE persona_id > ?').run(id);
+        db.prepare('UPDATE personas SET id = id - 1 WHERE id > ?').run(id);
+        db.prepare("UPDATE sqlite_sequence SET seq = seq - 1 WHERE name = 'personas'").run();
+    })();
+    db.pragma('foreign_keys = ON');
+    if (persona)
+        (0, fileSystemService_1.deletePersonaFolder)(persona);
+    (0, fileSystemService_1.renumberPersonaFolders)(id);
 }

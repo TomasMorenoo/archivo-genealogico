@@ -12,6 +12,8 @@ exports.documentoFileName = documentoFileName;
 exports.generatePersonaMd = generatePersonaMd;
 exports.writePersonaMd = writePersonaMd;
 exports.getDocumentosPath = getDocumentosPath;
+exports.deletePersonaFolder = deletePersonaFolder;
+exports.renumberPersonaFolders = renumberPersonaFolders;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 function getDataRoot() {
@@ -133,4 +135,36 @@ function writePersonaMd(persona, relaciones, docsPrincipales, docsMencionada) {
 }
 function getDocumentosPath(persona) {
     return path_1.default.join(personaFolderPath(persona), 'Documentos');
+}
+function deletePersonaFolder(persona) {
+    const folderPath = personaFolderPath(persona);
+    if (fs_1.default.existsSync(folderPath)) {
+        fs_1.default.rmSync(folderPath, { recursive: true, force: true });
+    }
+}
+function renumberPersonaFolders(fromId) {
+    const personasDir = path_1.default.join(getDataRoot(), 'Personas');
+    if (!fs_1.default.existsSync(personasDir))
+        return;
+    const entries = fs_1.default.readdirSync(personasDir);
+    // Find folders with id > fromId, sort ascending so we rename P(n+1)→Pn without conflicts
+    const toRename = [];
+    for (const entry of entries) {
+        const match = entry.match(/^P(\d+)_(.+)$/);
+        if (!match)
+            continue;
+        const folderId = Number(match[1]);
+        if (folderId > fromId) {
+            const newName = `P${String(folderId - 1).padStart(5, '0')}_${match[2]}`;
+            toRename.push({
+                oldPath: path_1.default.join(personasDir, entry),
+                newPath: path_1.default.join(personasDir, newName),
+            });
+        }
+    }
+    toRename.sort((a, b) => a.oldPath.localeCompare(b.oldPath));
+    for (const { oldPath, newPath } of toRename) {
+        if (fs_1.default.existsSync(oldPath))
+            fs_1.default.renameSync(oldPath, newPath);
+    }
 }

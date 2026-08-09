@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { personasApi, relacionesApi } from '../api/client';
 import type { Persona, PersonaListItem } from '../types';
 import PersonaList from '../components/PersonaList/PersonaList';
@@ -6,6 +7,7 @@ import PersonaForm from '../components/PersonaForm/PersonaForm';
 import PersonaSearchInput from '../components/PersonaSearchInput/PersonaSearchInput';
 
 export default function HomePage() {
+  const navigate = useNavigate();
   const [personas, setPersonas] = useState<PersonaListItem[]>([]);
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
@@ -57,7 +59,10 @@ export default function HomePage() {
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 16px' }}>
       <header style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: '1.6rem', fontWeight: 700, marginBottom: 4 }}>Archivo Genealógico Familiar</h1>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, flexWrap: 'wrap' }}>
+          <h1 style={{ fontSize: '1.6rem', fontWeight: 700, marginBottom: 4 }}>Archivo Genealógico Familiar</h1>
+          <button onClick={() => navigate('/arbol')} style={arbolLink}>Árbol →</button>
+        </div>
         <p style={{ color: '#666', fontSize: '0.9rem' }}>{personas.length} personas registradas</p>
       </header>
 
@@ -141,6 +146,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 
 const overlay: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 };
 const dialog: React.CSSProperties = { background: '#fff', borderRadius: 8, padding: 24, width: '100%', maxWidth: 500, maxHeight: '90vh', overflowY: 'auto' };
+const arbolLink: React.CSSProperties = { background: 'none', border: 'none', color: '#0070f3', cursor: 'pointer', fontSize: '1rem', fontWeight: 600, padding: 0 };
 const btnPrimary: React.CSSProperties = { background: '#1a1a1a', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 4, cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' };
 const btnSmall: React.CSSProperties = { border: 'none', padding: '6px 10px', borderRadius: 4, cursor: 'pointer', fontSize: '0.8rem' };
 const rowStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4 };

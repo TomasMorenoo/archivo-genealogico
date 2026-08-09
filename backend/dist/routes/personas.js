@@ -15,7 +15,8 @@ function regenerateMd(personaId) {
 }
 exports.personasRouter.get('/', (req, res) => {
     const search = typeof req.query.q === 'string' ? req.query.q : undefined;
-    res.json((0, personaService_1.listPersonas)(search));
+    const maxNacAnio = typeof req.query.max_nac_anio === 'string' ? Number(req.query.max_nac_anio) : undefined;
+    res.json((0, personaService_1.listPersonas)(search, maxNacAnio));
 });
 exports.personasRouter.get('/:id', (req, res) => {
     const p = (0, personaService_1.getPersona)(Number(req.params.id));
