@@ -4,11 +4,44 @@ interface Entry {
 }
 
 const CHANGELOG: Record<string, Entry[]> = {
-  // Agregá acá las novedades de cada versión. La clave es el número de versión exacto.
+  // Clave = versión exacta que muestra el CI (ej. '1.0.42'). 'default' se usa si no hay entrada específica.
   'default': [
     {
+      title: 'Documentos',
+      items: [
+        'Nuevo diseño de sección de documentos: tarjetas colapsables con flechita desplegable.',
+        'Previsualización de PDF e imágenes directamente en el perfil.',
+        'El formulario ahora pide el Tipo como campo principal; el Título solo aparece si elegís "Otro".',
+        'Las personas mencionadas en un documento pueden abrirlo desde su propio perfil.',
+        'La persona del perfil aparece pre-seleccionada como principal al crear un documento.',
+      ],
+    },
+    {
+      title: 'Relaciones',
+      items: [
+        'Soporte para múltiples cónyuges.',
+        'Cónyuge siempre visible en la sección de relaciones del perfil.',
+        'Al buscar padre/madre, se filtra automáticamente por personas nacidas antes que la persona que estás cargando.',
+        'Los hijos se ordenan por año de nacimiento (mayor arriba) y se muestra el año junto al nombre.',
+        'Se crea automáticamente la relación de hermano/hermana cuando dos personas comparten un padre.',
+      ],
+    },
+    {
+      title: 'Personas',
+      items: [
+        'Al eliminar una persona, su carpeta de Windows también se elimina y las demás se renumeran.',
+        'Si una persona está fallecida pero sin fecha, el índice muestra "Fallecido/a".',
+        'Solo el país es obligatorio al cargar un lugar.',
+      ],
+    },
+    {
       title: 'Mejoras generales',
-      items: ['Correcciones de errores y mejoras de rendimiento.'],
+      items: [
+        'La app ahora cierra correctamente al instalar actualizaciones (ya no quedan procesos en segundo plano).',
+        'Diseño responsive: la ventana puede achicarse hasta 400px de ancho.',
+        'Textos y etiquetas con mejor contraste para pantallas HD.',
+        'Menú Ayuda → Novedades para ver este cartel cuando quieras.',
+      ],
     },
   ],
 };
@@ -57,7 +90,8 @@ const overlay: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
 };
 const dialog: React.CSSProperties = {
-  background: '#fff', borderRadius: 10, padding: 28, width: '100%', maxWidth: 440,
+  background: '#fff', borderRadius: 10, padding: 28, width: '100%', maxWidth: 460,
+  maxHeight: '85vh', overflowY: 'auto',
   boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
 };
 const btn: React.CSSProperties = {

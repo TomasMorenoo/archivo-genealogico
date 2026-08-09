@@ -4,6 +4,7 @@ interface ElectronAPI {
   getVersion: () => Promise<string>;
   openFile: (filePath: string) => Promise<string>;
   checkWhatsNew: () => Promise<{ isNew: boolean; version: string }>;
+  onOpenWhatsNew: (cb: () => void) => () => void;
 }
 
 declare global {

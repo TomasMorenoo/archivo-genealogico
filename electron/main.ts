@@ -91,6 +91,11 @@ function buildMenu(): void {
       label: 'Ayuda',
       submenu: [
         {
+          label: 'Novedades',
+          click: () => mainWindow?.webContents.send('open-whats-new'),
+        },
+        { type: 'separator' },
+        {
           label: 'Buscar actualizaciones',
           click: () => {
             autoUpdater.checkForUpdates();

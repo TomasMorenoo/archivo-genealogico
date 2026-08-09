@@ -20,6 +20,10 @@ export default function App() {
     window.electronAPI.checkWhatsNew().then(({ isNew, version }) => {
       if (isNew) setWhatsNew({ version });
     });
+    const unlisten = window.electronAPI.onOpenWhatsNew(() => {
+      window.electronAPI!.getVersion().then(v => setWhatsNew({ version: v }));
+    });
+    return unlisten;
   }, []);
 
   if (ready === null) return null;

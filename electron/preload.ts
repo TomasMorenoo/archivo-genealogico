@@ -11,4 +11,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('open-file', filePath),
   checkWhatsNew: (): Promise<{ isNew: boolean; version: string }> =>
     ipcRenderer.invoke('check-whats-new'),
+  onOpenWhatsNew: (cb: () => void) => {
+    ipcRenderer.on('open-whats-new', cb);
+    return () => ipcRenderer.removeListener('open-whats-new', cb);
+  },
 });
