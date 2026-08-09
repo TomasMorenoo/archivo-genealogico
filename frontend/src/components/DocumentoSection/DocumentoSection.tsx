@@ -5,12 +5,15 @@ import { documentosApi } from '../../api/client';
 
 interface Props {
   personaId: number;
+  personaNombre?: string;
+  personaApellido?: string;
+  personaPid?: string;
   principales: Documento[];
   mencionada: Documento[];
   onUpdate: () => void;
 }
 
-export default function DocumentoSection({ personaId, principales, mencionada, onUpdate }: Props) {
+export default function DocumentoSection({ personaId, personaNombre, personaApellido, personaPid, principales, mencionada, onUpdate }: Props) {
   const [adding, setAdding] = useState(false);
 
   async function handleDelete(id: number) {
@@ -29,7 +32,7 @@ export default function DocumentoSection({ personaId, principales, mencionada, o
       {adding && (
         <div style={{ marginBottom: 20, padding: 16, background: '#f9f9f9', borderRadius: 6, border: '1px solid #e0e0e0' }}>
           <DocumentoForm
-            defaultPersonaId={personaId}
+            defaultPersona={personaNombre ? { id: personaId, nombre: personaNombre, apellido: personaApellido ?? '', pid: personaPid ?? '' } : undefined}
             onSaved={() => { setAdding(false); onUpdate(); }}
             onCancel={() => setAdding(false)}
           />

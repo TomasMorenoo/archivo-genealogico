@@ -9,12 +9,12 @@ const TIPOS_DOCUMENTO = [
 ];
 
 interface Props {
-  defaultPersonaId?: number;
+  defaultPersona?: { id: number; nombre: string; apellido: string; pid: string };
   onSaved: (doc: Documento) => void;
   onCancel: () => void;
 }
 
-export default function DocumentoForm({ defaultPersonaId, onSaved, onCancel }: Props) {
+export default function DocumentoForm({ defaultPersona, onSaved, onCancel }: Props) {
   const [titulo, setTitulo] = useState('');
   const [tipo, setTipo] = useState(TIPOS_DOCUMENTO[0]);
   const [anio, setAnio] = useState('');
@@ -24,6 +24,7 @@ export default function DocumentoForm({ defaultPersonaId, onSaved, onCancel }: P
   const [mencionadas, setMencionadas] = useState<PersonaListItem[]>([]);
   const [saving, setSaving] = useState(false);
 
+  const defaultPersonaId = defaultPersona?.id;
   const allSelectedIds = [...principales, ...mencionadas].map(p => p.id);
   if (defaultPersonaId && !allSelectedIds.includes(defaultPersonaId)) {
     allSelectedIds.push(defaultPersonaId);
@@ -74,8 +75,13 @@ export default function DocumentoForm({ defaultPersonaId, onSaved, onCancel }: P
       </div>
 
       <div style={f}>
-        <label style={{ fontWeight: 600 }}>Persona(s) principal(es) {!defaultPersonaId ? '*' : ''}</label>
+        <label style={{ fontWeight: 600 }}>Persona(s) principal(es) {!defaultPersona ? '*' : ''}</label>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
+          {defaultPersona && (
+            <span style={{ ...chip, background: '#dbeafe' }}>
+              <code style={{ fontSize: '0.75em' }}>{defaultPersona.pid}</code> {defaultPersona.apellido}, {defaultPersona.nombre}
+            </span>
+          )}
           {principales.map(p => (
             <span key={p.id} style={chip}>
               <code style={{ fontSize: '0.75em' }}>{p.pid}</code> {p.apellido}, {p.nombre}

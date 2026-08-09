@@ -275,6 +275,9 @@ export default function PersonaPage() {
       <section style={card}>
         <DocumentoSection
           personaId={numId}
+          personaNombre={persona.nombre}
+          personaApellido={persona.apellido}
+          personaPid={persona.pid}
           principales={docsPrincipales}
           mencionada={docsMencionada}
           onUpdate={loadDocumentos}
