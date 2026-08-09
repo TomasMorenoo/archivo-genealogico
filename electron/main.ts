@@ -96,12 +96,11 @@ ipcMain.handle('save-tree-pdf', async (_event, opts: {
   try {
     await hidden.loadURL(dataUrl);
 
-    const marginsMicrons = opts.marginsMm * 1000;
     const buf = await hidden.webContents.printToPDF({
       pageSize: opts.pageSize as Electron.PrintToPDFOptions['pageSize'],
       landscape: opts.landscape,
       printBackground: true,
-      margins: { marginType: 'custom', top: marginsMicrons, bottom: marginsMicrons, left: marginsMicrons, right: marginsMicrons },
+      margins: { marginType: 'none' },
     });
 
     const fs = await import('fs');
