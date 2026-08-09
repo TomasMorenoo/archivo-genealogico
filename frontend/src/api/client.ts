@@ -14,8 +14,8 @@ export const personasApi = {
     api.put<Persona>(`/personas/${id}`, data).then(r => r.data),
   delete: (id: number) =>
     api.delete(`/personas/${id}`),
-  ancestros: (id: number, generaciones = 5) =>
-    api.get<AncestorNode>(`/personas/${id}/ancestros`, { params: { generaciones } }).then(r => r.data),
+  ancestros: (id: number, generaciones = 5, view: 'bio' | 'adoptivo' = 'bio') =>
+    api.get<AncestorNode>(`/personas/${id}/ancestros`, { params: { generaciones, view } }).then(r => r.data),
 };
 
 export const relacionesApi = {
@@ -68,6 +68,13 @@ export interface NominatimResult {
   lon: number;
   display: string;
 }
+
+export const configApi = {
+  get: (clave: string) =>
+    api.get<string | null>(`/config/${clave}`).then(r => r.data),
+  set: (clave: string, valor: string | null) =>
+    api.put(`/config/${clave}`, { valor }),
+};
 
 export const lugaresApi = {
   search: (q: string) =>
