@@ -89,8 +89,28 @@ export const CHANGELOG: ChangelogEntry[] = [
           'Vista vertical (de abajo para arriba) y horizontal.',
           'Alternás entre árbol biológico y adoptivo.',
           'Tarjetas con nombre, apellido y fechas de vida.',
-          'Botón Imprimir: exportá el árbol a A4, A3, A2, A1 o A0.',
           'La raíz seleccionada y las preferencias de vista se recuerdan entre sesiones.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 4,
+    label: 'Beta – Árbol v1.2',
+    channel: 'beta',
+    sections: [
+      {
+        title: 'Árbol genealógico',
+        items: [
+          'Guardar como PDF: exportá el árbol en alta definición (calidad vectorial para imprimir).',
+          'Elegí el tamaño de hoja (A4 a A0), orientación y márgenes antes de guardar.',
+          'Vista previa del árbol dentro de la hoja con indicador de escala.',
+        ],
+      },
+      {
+        title: 'Instalación',
+        items: [
+          'La beta y la oficial ahora pueden convivir instaladas al mismo tiempo sin pisarse.',
         ],
       },
     ],
