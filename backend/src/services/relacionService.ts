@@ -14,7 +14,8 @@ export function getRelacionesDePersona(personaId: number): Relacion[] {
       r.tipo_relacion_id,
       tr.nombre as tipo_relacion_nombre,
       r.persona_destino_id,
-      (p.apellido || ', ' || p.nombre) as persona_destino_nombre
+      (p.apellido || ', ' || p.nombre) as persona_destino_nombre,
+      p.nac_anio as persona_destino_nac_anio
     FROM relaciones r
     JOIN tipo_relacion tr ON r.tipo_relacion_id = tr.id
     JOIN personas p ON r.persona_destino_id = p.id

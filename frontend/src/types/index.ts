@@ -67,6 +67,7 @@ export interface Relacion {
   persona_destino_id: number;
   persona_destino_pid: string;
   persona_destino_nombre: string;
+  persona_destino_nac_anio: number | null;
 }
 
 export interface DocumentoPersona {

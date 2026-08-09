@@ -208,20 +208,32 @@ export default function PersonaPage() {
 
               {otras.length > 0 && (
                 <ul style={{ padding: 0, listStyle: 'none', borderTop: '1px solid #f0f0f0', paddingTop: 8, marginTop: 4 }}>
-                  {otras.map(r => (
+                  {[...otras].sort((a, b) => {
+                    const isHijo = (r: typeof a) => r.tipo_relacion_nombre === 'Hijo' || r.tipo_relacion_nombre === 'Hija';
+                    if (!isHijo(a) || !isHijo(b)) return 0;
+                    const ya = a.persona_destino_nac_anio ?? Infinity;
+                    const yb = b.persona_destino_nac_anio ?? Infinity;
+                    return ya - yb;
+                  }).map(r => {
+                    const isHijo = r.tipo_relacion_nombre === 'Hijo' || r.tipo_relacion_nombre === 'Hija';
+                    return (
                     <li key={r.id} style={relItem}>
                       <div>
                         <span style={relTag}>{r.tipo_relacion_nombre}</span>
                         <Link to={`/persona/${r.persona_destino_id}`} style={{ color: '#0070f3' }}>
                           {r.persona_destino_nombre}
                         </Link>
+                        {isHijo && r.persona_destino_nac_anio && (
+                          <span style={{ color: '#666', marginLeft: 6, fontSize: '0.82rem' }}>{r.persona_destino_nac_anio}</span>
+                        )}
                         <span style={{ color: '#666', marginLeft: 6, fontSize: '0.82rem' }}>
                           ({r.persona_destino_pid})
                         </span>
                       </div>
                       <button onClick={() => handleDeleteRelacion(r.id)} style={delBtn}>×</button>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               )}
             </>
