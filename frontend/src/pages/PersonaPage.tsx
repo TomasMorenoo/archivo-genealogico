@@ -218,13 +218,13 @@ export default function PersonaPage() {
               {otras.length > 0 && (
                 <ul style={{ padding: 0, listStyle: 'none', borderTop: '1px solid #f0f0f0', paddingTop: 8, marginTop: 4 }}>
                   {[...otras].sort((a, b) => {
-                    const isHijo = (r: typeof a) => r.tipo_relacion_nombre === 'Hijo' || r.tipo_relacion_nombre === 'Hija';
-                    if (!isHijo(a) || !isHijo(b)) return 0;
+                    const isSortable = (r: typeof a) => ['Hijo','Hija','Hermano','Hermana'].includes(r.tipo_relacion_nombre);
+                    if (!isSortable(a) || !isSortable(b)) return 0;
                     const ya = a.persona_destino_nac_anio ?? Infinity;
                     const yb = b.persona_destino_nac_anio ?? Infinity;
                     return ya - yb;
                   }).map(r => {
-                    const isHijo = r.tipo_relacion_nombre === 'Hijo' || r.tipo_relacion_nombre === 'Hija';
+                    const showAnio = ['Hijo','Hija','Hermano','Hermana'].includes(r.tipo_relacion_nombre);
                     return (
                     <li key={r.id} style={relItem}>
                       <div>
@@ -232,7 +232,7 @@ export default function PersonaPage() {
                         <Link to={`/persona/${r.persona_destino_id}`} style={{ color: '#0070f3' }}>
                           {r.persona_destino_nombre}
                         </Link>
-                        {isHijo && r.persona_destino_nac_anio && (
+                        {showAnio && r.persona_destino_nac_anio && (
                           <span style={{ color: '#666', marginLeft: 6, fontSize: '0.82rem' }}>{r.persona_destino_nac_anio}</span>
                         )}
                         <span style={{ color: '#666', marginLeft: 6, fontSize: '0.82rem' }}>
