@@ -3,9 +3,12 @@ import { autoUpdater } from 'electron-updater';
 import Store from 'electron-store';
 import path from 'path';
 
+// Increment this whenever user-visible changes are added to frontend/src/data/changelog.ts
+const CHANGELOG_VERSION = 2;
+
 interface StoreSchema {
   archivoRoot?: string;
-  lastSeenVersion?: string;
+  lastSeenChangelogId?: number;
 }
 
 const store = new Store<StoreSchema>();
@@ -55,11 +58,10 @@ function createWindow(): void {
 ipcMain.handle('get-version', () => app.getVersion());
 ipcMain.handle('open-file', (_event, filePath: string) => shell.openPath(filePath));
 ipcMain.handle('check-whats-new', () => {
-  const current = app.getVersion();
-  const last = store.get('lastSeenVersion');
-  const isNew = last !== current;
-  if (isNew) store.set('lastSeenVersion', current);
-  return { isNew, version: current };
+  const lastSeenId = store.get('lastSeenChangelogId', 0);
+  const isNew = lastSeenId < CHANGELOG_VERSION;
+  if (isNew) store.set('lastSeenChangelogId', CHANGELOG_VERSION);
+  return { isNew, lastSeenId };
 });
 
 ipcMain.handle('get-archivo-root', () => {

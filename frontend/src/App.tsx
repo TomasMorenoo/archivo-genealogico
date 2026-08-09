@@ -19,7 +19,7 @@ function NavigationHandler() {
 
 export default function App() {
   const [ready, setReady] = useState<boolean | null>(null);
-  const [whatsNew, setWhatsNew] = useState<{ version: string } | null>(null);
+  const [whatsNew, setWhatsNew] = useState<{ lastSeenId: number } | null>(null);
 
   useEffect(() => {
     if (!window.electronAPI) {
@@ -29,11 +29,11 @@ export default function App() {
     window.electronAPI.getArchivoRoot().then(root => {
       setReady(root !== null);
     });
-    window.electronAPI.checkWhatsNew().then(({ isNew, version }) => {
-      if (isNew) setWhatsNew({ version });
+    window.electronAPI.checkWhatsNew().then(({ isNew, lastSeenId }) => {
+      if (isNew) setWhatsNew({ lastSeenId });
     });
     const unlisten = window.electronAPI.onOpenWhatsNew(() => {
-      window.electronAPI!.getVersion().then(v => setWhatsNew({ version: v }));
+      setWhatsNew({ lastSeenId: 0 });
     });
     return unlisten;
   }, []);
@@ -50,7 +50,7 @@ export default function App() {
         <Route path="/migracion-lugares" element={<MigracionLugaresPage />} />
         <Route path="/arbol" element={<ArbolPage />} />
       </Routes>
-      {whatsNew && <WhatsNew version={whatsNew.version} onClose={() => setWhatsNew(null)} />}
+      {whatsNew && <WhatsNew lastSeenId={whatsNew.lastSeenId} onClose={() => setWhatsNew(null)} />}
     </>
   );
 }

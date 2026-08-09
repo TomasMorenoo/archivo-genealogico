@@ -9,7 +9,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('get-version'),
   openFile: (filePath: string): Promise<string> =>
     ipcRenderer.invoke('open-file', filePath),
-  checkWhatsNew: (): Promise<{ isNew: boolean; version: string }> =>
+  checkWhatsNew: (): Promise<{ isNew: boolean; lastSeenId: number }> =>
     ipcRenderer.invoke('check-whats-new'),
   onOpenWhatsNew: (cb: () => void) => {
     ipcRenderer.on('open-whats-new', cb);
