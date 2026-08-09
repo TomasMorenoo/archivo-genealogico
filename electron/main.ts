@@ -128,6 +128,7 @@ app.whenReady().then(async () => {
 
   const isDev = process.env.ELECTRON_DEV === 'true';
   if (!isDev) {
+    autoUpdater.allowPrerelease = app.getVersion().includes('beta');
     autoUpdater.on('update-downloaded', () => {
       dialog.showMessageBox({
         type: 'info',
