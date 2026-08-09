@@ -11,6 +11,15 @@ export function searchLugares(q: string): Lugar[] {
   `).all(search, search, search) as Lugar[];
 }
 
+export function getAllLugares(): Lugar[] {
+  return getDb().prepare('SELECT * FROM lugares ORDER BY id').all() as Lugar[];
+}
+
+export function updateLugarById(id: number, data: { ciudad: string; provincia: string | null; pais: string; latitud: number; longitud: number }): void {
+  getDb().prepare('UPDATE lugares SET ciudad=?, provincia=?, pais=?, latitud=?, longitud=? WHERE id=?')
+    .run(data.ciudad, data.provincia, data.pais, data.latitud, data.longitud, id);
+}
+
 export function upsertLugar(input: {
   ciudad: string;
   provincia?: string | null;

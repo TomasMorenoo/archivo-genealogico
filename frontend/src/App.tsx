@@ -1,9 +1,20 @@
 import { useEffect, useState } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import PersonaPage from './pages/PersonaPage';
 import SetupPage from './pages/SetupPage';
+import MigracionLugaresPage from './pages/MigracionLugaresPage';
 import WhatsNew from './components/WhatsNew/WhatsNew';
+
+function NavigationHandler() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!window.electronAPI) return;
+    const unlisten = window.electronAPI.onNavigate((path) => navigate(path));
+    return unlisten;
+  }, [navigate]);
+  return null;
+}
 
 export default function App() {
   const [ready, setReady] = useState<boolean | null>(null);
@@ -31,9 +42,11 @@ export default function App() {
 
   return (
     <>
+      <NavigationHandler />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/persona/:id" element={<PersonaPage />} />
+        <Route path="/migracion-lugares" element={<MigracionLugaresPage />} />
       </Routes>
       {whatsNew && <WhatsNew version={whatsNew.version} onClose={() => setWhatsNew(null)} />}
     </>

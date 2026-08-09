@@ -58,9 +58,20 @@ export const documentosApi = {
     api.delete(`/documentos/${id}`),
 };
 
+export interface NominatimResult {
+  ciudad: string;
+  provincia: string | null;
+  pais: string;
+  lat: number;
+  lon: number;
+  display: string;
+}
+
 export const lugaresApi = {
   search: (q: string) =>
     api.get<Lugar[]>('/lugares/search', { params: { q } }).then(r => r.data),
-  create: (data: { ciudad: string; provincia?: string; pais: string }) =>
+  create: (data: { ciudad: string; provincia?: string | null; pais: string; latitud?: number; longitud?: number }) =>
     api.post<Lugar>('/lugares', data).then(r => r.data),
+  nominatim: (q: string) =>
+    api.get<NominatimResult[]>('/lugares/nominatim', { params: { q } }).then(r => r.data),
 };

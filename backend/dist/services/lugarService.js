@@ -1,6 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.searchLugares = searchLugares;
+exports.getAllLugares = getAllLugares;
+exports.updateLugarById = updateLugarById;
 exports.upsertLugar = upsertLugar;
 const database_1 = require("../db/database");
 function searchLugares(q) {
@@ -11,6 +13,13 @@ function searchLugares(q) {
     ORDER BY ciudad, provincia, pais
     LIMIT 20
   `).all(search, search, search);
+}
+function getAllLugares() {
+    return (0, database_1.getDb)().prepare('SELECT * FROM lugares ORDER BY id').all();
+}
+function updateLugarById(id, data) {
+    (0, database_1.getDb)().prepare('UPDATE lugares SET ciudad=?, provincia=?, pais=?, latitud=?, longitud=? WHERE id=?')
+        .run(data.ciudad, data.provincia, data.pais, data.latitud, data.longitud, id);
 }
 function upsertLugar(input) {
     const db = (0, database_1.getDb)();

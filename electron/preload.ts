@@ -15,4 +15,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('open-whats-new', cb);
     return () => ipcRenderer.removeListener('open-whats-new', cb);
   },
+  onNavigate: (cb: (path: string) => void) => {
+    ipcRenderer.on('navigate', (_e, path) => cb(path));
+    return () => ipcRenderer.removeAllListeners('navigate');
+  },
 });

@@ -94,6 +94,10 @@ function buildMenu(): void {
           label: 'Novedades',
           click: () => mainWindow?.webContents.send('open-whats-new'),
         },
+        {
+          label: 'Normalizar lugares existentes',
+          click: () => mainWindow?.webContents.send('navigate', '/migracion-lugares'),
+        },
         { type: 'separator' },
         {
           label: 'Buscar actualizaciones',
