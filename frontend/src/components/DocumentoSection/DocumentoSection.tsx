@@ -17,7 +17,9 @@ function isPdf(nombre: string | null): boolean {
 }
 
 function docLabel(d: Documento): string {
-  return d.tipo === 'Otro' ? d.titulo : d.tipo;
+  const tipo = d.tipo === 'Otro' ? d.titulo : d.tipo;
+  const principal = d.personas.find(p => p.rol === 'principal');
+  return principal ? `${tipo} · ${principal.persona_nombre}` : tipo;
 }
 
 function FilePreview({ ruta, nombre }: { ruta: string; nombre: string }) {

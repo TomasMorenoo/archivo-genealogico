@@ -30,6 +30,7 @@ export default function PersonaForm({ initial = {}, onSave, onCancel, compact = 
     nombre: initial.nombre ?? '',
     apellido: initial.apellido ?? '',
     sexo: initial.sexo ?? 'M',
+    dni: initial.dni ?? '',
     nac_dia: initial.nac_dia ? String(initial.nac_dia) : '',
     nac_mes: initial.nac_mes ? String(initial.nac_mes) : '',
     nac_anio: initial.nac_anio ? String(initial.nac_anio) : '',
@@ -47,6 +48,7 @@ export default function PersonaForm({ initial = {}, onSave, onCancel, compact = 
       nombre: form.nombre,
       apellido: form.apellido,
       sexo: form.sexo as 'M' | 'F' | 'otro',
+      dni: form.dni || null,
       nac_dia: form.nac_dia ? Number(form.nac_dia) : null,
       nac_mes: form.nac_mes ? Number(form.nac_mes) : null,
       nac_anio: form.nac_anio ? Number(form.nac_anio) : null,
@@ -80,6 +82,10 @@ export default function PersonaForm({ initial = {}, onSave, onCancel, compact = 
           <option value="F">Femenino</option>
           <option value="otro">Otro</option>
         </select>
+      </div>
+      <div style={rowStyle}>
+        <label>DNI</label>
+        <input value={form.dni} onChange={e => set('dni', e.target.value)} style={inputStyle} placeholder="Número de documento..." />
       </div>
 
       {!compact && (

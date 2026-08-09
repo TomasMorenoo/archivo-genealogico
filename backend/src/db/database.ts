@@ -22,6 +22,7 @@ export function getDb(): Database.Database {
     const schema = fs.readFileSync(SCHEMA_PATH, 'utf-8');
     db.exec(schema);
     try { db.exec('ALTER TABLE personas ADD COLUMN fallecida INTEGER NOT NULL DEFAULT 0'); } catch {}
+    try { db.exec('ALTER TABLE personas ADD COLUMN dni TEXT'); } catch {}
     runMigrations(db);
   }
   return db;

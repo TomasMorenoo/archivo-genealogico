@@ -52,6 +52,7 @@ export interface Persona {
   historia: string;
   fallecida: boolean;
   foto_ruta: string | null;
+  dni: string | null;
 }
 
 export interface TipoRelacion {

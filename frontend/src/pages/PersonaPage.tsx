@@ -106,6 +106,7 @@ export default function PersonaPage() {
                 ['Nombre', persona.nombre],
                 ['Apellido', persona.apellido],
                 ['Sexo', { M: 'Masculino', F: 'Femenino', otro: 'Otro' }[persona.sexo]],
+                ...(persona.dni ? [['DNI', persona.dni]] : []),
                 ['Estado', persona.fallecida ? 'Fallecido/a' : 'Vivo/a'],
                 ['Nacimiento', nacimiento],
                 ['Lugar nacimiento', persona.nac_lugar

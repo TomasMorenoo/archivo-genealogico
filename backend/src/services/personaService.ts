@@ -74,6 +74,7 @@ export interface CreatePersonaInput {
   def_lugar_id?: number | null;
   historia?: string;
   fallecida?: boolean;
+  dni?: string | null;
 }
 
 export function createPersona(input: CreatePersonaInput): Persona {
@@ -81,10 +82,10 @@ export function createPersona(input: CreatePersonaInput): Persona {
   const result = db.prepare(`
     INSERT INTO personas
       (nombre, apellido, sexo, nac_dia, nac_mes, nac_anio, nac_tipo, nac_lugar_id,
-       def_dia, def_mes, def_anio, def_tipo, def_lugar_id, historia, fallecida)
+       def_dia, def_mes, def_anio, def_tipo, def_lugar_id, historia, fallecida, dni)
     VALUES
       (@nombre, @apellido, @sexo, @nac_dia, @nac_mes, @nac_anio, @nac_tipo, @nac_lugar_id,
-       @def_dia, @def_mes, @def_anio, @def_tipo, @def_lugar_id, @historia, @fallecida)
+       @def_dia, @def_mes, @def_anio, @def_tipo, @def_lugar_id, @historia, @fallecida, @dni)
   `).run({
     nombre: input.nombre,
     apellido: input.apellido,
@@ -101,6 +102,7 @@ export function createPersona(input: CreatePersonaInput): Persona {
     def_lugar_id: input.def_lugar_id ?? null,
     historia: input.historia ?? '',
     fallecida: input.fallecida ? 1 : 0,
+    dni: input.dni ?? null,
   });
   return getPersona(result.lastInsertRowid as number)!;
 }
@@ -108,7 +110,7 @@ export function createPersona(input: CreatePersonaInput): Persona {
 export function updatePersona(id: number, input: Partial<CreatePersonaInput>): Persona | null {
   const db = getDb();
   const allowed = ['nombre','apellido','sexo','nac_dia','nac_mes','nac_anio','nac_tipo',
-    'nac_lugar_id','def_dia','def_mes','def_anio','def_tipo','def_lugar_id','historia','fallecida'];
+    'nac_lugar_id','def_dia','def_mes','def_anio','def_tipo','def_lugar_id','historia','fallecida','dni'];
   const entries = Object.entries(input).filter(([k]) => allowed.includes(k));
   if (entries.length === 0) return getPersona(id);
   const fields = entries.map(([k]) => `${k} = @${k}`).join(', ');
