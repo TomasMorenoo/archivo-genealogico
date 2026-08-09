@@ -51,14 +51,17 @@ export default function DocumentoSection({ personaId, personaNombre, personaApel
                   <span style={tag}>{d.tipo}</span>
                   {d.doc_anio && <span style={yearStyle}>{d.doc_anio}</span>}
                   {d.nombre_original && (
-                    <span style={{ marginLeft: 8, color: '#0070f3', fontSize: '0.8rem' }}>📎 {d.nombre_original}</span>
+                    <span style={{ marginLeft: 8, color: '#888', fontSize: '0.8rem' }}>📎 {d.nombre_original}</span>
                   )}
                   {d.descripcion && <p style={{ color: '#666', fontSize: '0.82rem', marginTop: 2 }}>{d.descripcion}</p>}
                   <div style={{ fontSize: '0.78rem', color: '#aaa', marginTop: 2 }}>
                     Mencionados: {d.personas.filter(p => p.rol === 'mencionada').map(p => p.persona_nombre).join(', ') || '—'}
                   </div>
                 </div>
-                <button onClick={() => handleDelete(d.id)} style={delBtn}>Eliminar</button>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  {d.ruta && <button onClick={() => window.electronAPI?.openFile(d.ruta!)} style={openBtn}>Abrir</button>}
+                  <button onClick={() => handleDelete(d.id)} style={delBtn}>Eliminar</button>
+                </div>
               </li>
             ))}
           </ul>
@@ -79,6 +82,7 @@ export default function DocumentoSection({ personaId, personaNombre, personaApel
                     Principal: {d.personas.filter(p => p.rol === 'principal').map(p => p.persona_nombre).join(', ')}
                   </div>
                 </div>
+                {d.ruta && <button onClick={() => window.electronAPI?.openFile(d.ruta!)} style={openBtn}>Abrir</button>}
               </li>
             ))}
           </ul>
@@ -96,4 +100,5 @@ const did: React.CSSProperties = { color: '#888', fontSize: '0.78em', marginRigh
 const tag: React.CSSProperties = { background: '#f0f0f0', padding: '1px 6px', borderRadius: 3, fontSize: '0.75rem', marginLeft: 8, color: '#555' };
 const yearStyle: React.CSSProperties = { color: '#999', fontSize: '0.8rem', marginLeft: 6 };
 const delBtn: React.CSSProperties = { border: 'none', background: 'none', color: '#bbb', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' };
+const openBtn: React.CSSProperties = { border: '1px solid #ccc', background: 'transparent', color: '#0070f3', cursor: 'pointer', fontSize: '0.82rem', padding: '3px 10px', borderRadius: 4, whiteSpace: 'nowrap' };
 const btnSmall: React.CSSProperties = { border: '1px solid #ccc', background: 'transparent', padding: '5px 12px', borderRadius: 4, cursor: 'pointer', fontSize: '0.85rem' };

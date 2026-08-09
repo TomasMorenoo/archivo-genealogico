@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, Menu, shell } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import Store from 'electron-store';
 import path from 'path';
@@ -52,6 +52,7 @@ function createWindow(): void {
 }
 
 ipcMain.handle('get-version', () => app.getVersion());
+ipcMain.handle('open-file', (_event, filePath: string) => shell.openPath(filePath));
 
 ipcMain.handle('get-archivo-root', () => {
   return store.get('archivoRoot') ?? null;

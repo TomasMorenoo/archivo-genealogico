@@ -7,4 +7,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('select-archivo-root'),
   getVersion: (): Promise<string> =>
     ipcRenderer.invoke('get-version'),
+  openFile: (filePath: string): Promise<string> =>
+    ipcRenderer.invoke('open-file', filePath),
 });
