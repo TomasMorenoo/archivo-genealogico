@@ -5,21 +5,26 @@ export interface ChangelogSection {
 
 export interface ChangelogEntry {
   id: number;
+  label: string; // short label shown in nav, e.g. "v1.0.35" or "Ago 2026"
   sections: ChangelogSection[];
 }
 
+// One entry per meaningful release. Each entry = ONLY what changed in that update.
+// Never accumulate old entries — add a NEW entry each time.
+// Bump CURRENT_CHANGELOG_ID in main.ts to match the last id here.
 export const CHANGELOG: ChangelogEntry[] = [
   {
     id: 1,
+    label: 'v1.0.35',
     sections: [
       {
         title: 'Documentos',
         items: [
           'Nuevo diseño de sección: tarjetas colapsables con flechita desplegable.',
           'Previsualización de PDF e imágenes directamente en el perfil.',
-          'El formulario ahora pide el Tipo como campo principal; el Título solo aparece si elegís "Otro".',
-          'Las personas mencionadas pueden abrir el documento desde su propio perfil.',
-          'La persona del perfil aparece pre-seleccionada como principal al crear un documento.',
+          'Tipo como campo principal; Título aparece solo si elegís "Otro".',
+          'Personas mencionadas pueden abrir el documento desde su propio perfil.',
+          'Persona del perfil pre-seleccionada como principal al crear un documento.',
         ],
       },
       {
@@ -27,16 +32,16 @@ export const CHANGELOG: ChangelogEntry[] = [
         items: [
           'Soporte para múltiples cónyuges.',
           'Cónyuge siempre visible en el perfil.',
-          'Al buscar padre/madre se filtra automáticamente por personas nacidas antes.',
-          'Los hijos y hermanos se ordenan por año de nacimiento y se muestra el año.',
-          'Se crea automáticamente la relación de hermano/hermana al compartir un padre.',
+          'Al buscar padre/madre se filtra por personas nacidas antes.',
+          'Hijos y hermanos ordenados por año de nacimiento.',
+          'Relación de hermano/hermana creada automáticamente al compartir padre.',
         ],
       },
       {
         title: 'Personas',
         items: [
-          'Al eliminar una persona su carpeta Windows también se elimina y las demás se renumeran.',
-          'Si está fallecida sin fecha, el índice muestra "Fallecido/a".',
+          'Al eliminar una persona su carpeta Windows se elimina y las demás se renumeran.',
+          'Fallecida sin fecha muestra "Fallecido/a" en el índice.',
           'Solo el país es obligatorio al cargar un lugar.',
           'Nuevo campo DNI en el perfil.',
         ],
@@ -45,29 +50,28 @@ export const CHANGELOG: ChangelogEntry[] = [
         title: 'Mejoras generales',
         items: [
           'La app cierra correctamente al instalar actualizaciones.',
-          'Menú Ayuda → Novedades para ver este cartel cuando quieras.',
-          'Buscador de lugares con autocompletado via Nominatim (OpenStreetMap).',
-          'Herramienta para normalizar lugares existentes en la base de datos.',
+          'Buscador de lugares con autocompletado via Nominatim.',
+          'Herramienta para normalizar lugares existentes (Ayuda → Normalizar lugares).',
         ],
       },
     ],
   },
   {
     id: 2,
+    label: 'v1.0.40',
     sections: [
-      {
-        title: 'Árbol genealógico',
-        items: [
-          'Nueva vista Árbol: pedigree horizontal hasta 5 generaciones hacia arriba.',
-          'Accedé desde el botón "Árbol →" en el índice.',
-          'Cada tarjeta es clickeable para ir directamente al perfil de esa persona.',
-        ],
-      },
       {
         title: 'Normalización de lugares',
         items: [
-          'Al revisar propuestas de Nominatim podés rechazar la sugerencia con ✕ y buscar un lugar alternativo vos mismo.',
-          'Aplicar cambios ahora es instantáneo (ya no re-consulta Nominatim al guardar).',
+          'Podés rechazar la propuesta de Nominatim con ✕ y buscar un lugar alternativo vos mismo.',
+          'Aplicar cambios es ahora instantáneo — ya no re-consulta Nominatim al guardar.',
+        ],
+      },
+      {
+        title: 'Novedades',
+        items: [
+          'Este cartel ahora es dinámico: cada actualización muestra exactamente qué cambió.',
+          'Flechitas ← → para navegar entre versiones anteriores sin perderte nada.',
         ],
       },
     ],
