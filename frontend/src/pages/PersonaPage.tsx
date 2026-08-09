@@ -20,6 +20,7 @@ export default function PersonaPage() {
   const [editingHistoria, setEditingHistoria] = useState(false);
   const [historiaText, setHistoriaText] = useState('');
   const [addingRelacion, setAddingRelacion] = useState(false);
+  const [addingConyuge, setAddingConyuge] = useState(false);
 
   const loadRelaciones = useCallback(() =>
     relacionesApi.dePersona(numId).then(setRelaciones), [numId]);
@@ -184,16 +185,23 @@ export default function PersonaPage() {
                     <button onClick={() => handleDeleteRelacion(rel.id)} style={delBtn}>×</button>
                   </div>
                 ))}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ ...relTag, minWidth: 64 }}>Cónyuge</span>
-                  <div style={{ flex: 1 }}>
-                    <PersonaSearchInput
-                      excludeIds={conyugeExcludeIds}
-                      onSelect={p => handleAddRelacion(5, p.id)}
-                      placeholder="Buscar o crear cónyuge..."
-                    />
+                {conyugeRels.length === 0 || addingConyuge ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ ...relTag, minWidth: 64 }}>Cónyuge</span>
+                    <div style={{ flex: 1 }}>
+                      <PersonaSearchInput
+                        excludeIds={conyugeExcludeIds}
+                        onSelect={p => { handleAddRelacion(5, p.id); setAddingConyuge(false); }}
+                        placeholder="Buscar o crear cónyuge..."
+                      />
+                    </div>
+                    {addingConyuge && (
+                      <button onClick={() => setAddingConyuge(false)} style={delBtn}>×</button>
+                    )}
                   </div>
-                </div>
+                ) : (
+                  <button onClick={() => setAddingConyuge(true)} style={{ ...btnSmall, fontSize: '0.78rem', alignSelf: 'flex-start', marginLeft: 72 }}>+ Agregar cónyuge</button>
+                )}
               </div>
 
               {addingRelacion && (
