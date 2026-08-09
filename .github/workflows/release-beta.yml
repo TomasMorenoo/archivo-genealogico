@@ -21,6 +21,7 @@ jobs:
           $newVersion = "1.1.0-beta.${{ github.run_number }}"
           $content = Get-Content package.json -Raw
           $content = $content -replace '"version": ".*?"', """version"": ""$newVersion"""
+          $content = $content -replace '"name": "archivo-genealogico"', '"name": "archivo-genealogico-beta"'
           Set-Content package.json $content
           echo "Version: $newVersion"
         shell: pwsh
