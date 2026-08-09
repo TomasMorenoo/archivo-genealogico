@@ -8,15 +8,38 @@ import type { PersonaListItem } from '../types';
 const MAX_GENS = 5;
 const CFG_ROOT = 'arbol_raiz_id';
 const CFG_ROOT_NAME = 'arbol_raiz_nombre';
+const CFG_ORIENTATION = 'arbol_orientation';
+const CFG_VIEW = 'arbol_view';
 
 type Orientation = 'horizontal' | 'vertical';
 type View = 'bio' | 'adoptivo';
 
+function fmtDate(dia: number | null, mes: number | null, anio: number | null, tipo: string): string {
+  if (tipo === 'desconocida') return '';
+  if (tipo === 'aproximada' && anio) return `≈${anio}`;
+  if (dia && mes && anio) return `${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}/${anio}`;
+  if (anio) return String(anio);
+  return '';
+}
+
+function fmtLife(node: AncestorNode): string {
+  const birth = fmtDate(node.nac_dia, node.nac_mes, node.nac_anio, node.nac_tipo);
+  let status: string;
+  if (node.fallecida) {
+    const death = fmtDate(node.def_dia, node.def_mes, node.def_anio, node.def_tipo);
+    status = death || 'Fallecido';
+  } else {
+    status = 'Vive';
+  }
+  return birth ? `${birth} – ${status}` : status;
+}
+
 function PersonCard({ node, onClick }: { node: AncestorNode; onClick: () => void }) {
   return (
     <div onClick={onClick} style={cardStyle}>
-      <div style={cardName}>{node.apellido}, {node.nombre}</div>
-      {node.nac_anio ? <div style={cardYear}>n. {node.nac_anio}</div> : null}
+      <div style={cardNombre}>{node.nombre}</div>
+      <div style={cardApellido}>{node.apellido}</div>
+      <div style={cardLife}>{fmtLife(node)}</div>
     </div>
   );
 }
@@ -64,6 +87,7 @@ function HBranch({ node, gen, navigate }: { node: AncestorNode; gen: number; nav
   );
 }
 
+// Bottom-to-top: current person at bottom, ancestors above
 function VBranch({ node, gen, navigate }: { node: AncestorNode; gen: number; navigate: (id: number) => void }) {
   const padre = gen < MAX_GENS ? node.padre : undefined;
   const madre = gen < MAX_GENS ? node.madre : undefined;
@@ -71,26 +95,26 @@ function VBranch({ node, gen, navigate }: { node: AncestorNode; gen: number; nav
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      <PersonCard node={node} onClick={() => navigate(node.id)} />
       {hasParents && (
         <>
-          <div style={{ width: 2, height: 16, background: '#d8d8d8', flexShrink: 0 }} />
-          <div style={{ display: 'flex', gap: 16, borderTop: '2px solid #d8d8d8' }}>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', borderBottom: '2px solid #d8d8d8' }}>
             {padre && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{ width: 2, height: 16, background: '#d8d8d8' }} />
                 <VBranch node={padre} gen={gen + 1} navigate={navigate} />
+                <div style={{ width: 2, height: 16, background: '#d8d8d8' }} />
               </div>
             )}
             {madre && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{ width: 2, height: 16, background: '#d8d8d8' }} />
                 <VBranch node={madre} gen={gen + 1} navigate={navigate} />
+                <div style={{ width: 2, height: 16, background: '#d8d8d8' }} />
               </div>
             )}
           </div>
+          <div style={{ width: 2, height: 16, background: '#d8d8d8', flexShrink: 0 }} />
         </>
       )}
+      <PersonCard node={node} onClick={() => navigate(node.id)} />
     </div>
   );
 }
@@ -101,7 +125,7 @@ export default function ArbolPage() {
   const [rootName, setRootName] = useState<string>('');
   const [root, setRoot] = useState<AncestorNode | null>(null);
   const [loading, setLoading] = useState(false);
-  const [orientation, setOrientation] = useState<Orientation>('horizontal');
+  const [orientation, setOrientation] = useState<Orientation>('vertical');
   const [view, setView] = useState<View>('bio');
 
   async function loadTree(id: number, v: View) {
@@ -115,18 +139,34 @@ export default function ArbolPage() {
   }
 
   useEffect(() => {
-    configApi.get(CFG_ROOT).then(val => {
-      if (!val) return;
-      const id = Number(val);
-      setRootId(id);
-      configApi.get(CFG_ROOT_NAME).then(n => setRootName(n ?? ''));
-      loadTree(id, 'bio');
+    Promise.all([
+      configApi.get(CFG_ROOT),
+      configApi.get(CFG_ROOT_NAME),
+      configApi.get(CFG_ORIENTATION),
+      configApi.get(CFG_VIEW),
+    ]).then(([id, name, orient, v]) => {
+      const savedOrientation = (orient as Orientation) || 'vertical';
+      const savedView = (v as View) || 'bio';
+      setOrientation(savedOrientation);
+      setView(savedView);
+      if (!id) return;
+      const numId = Number(id);
+      setRootId(numId);
+      setRootName(name ?? '');
+      loadTree(numId, savedView);
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    if (rootId && root) loadTree(rootId, view);
-  }, [view]); // eslint-disable-line react-hooks/exhaustive-deps
+  async function changeOrientation(o: Orientation) {
+    setOrientation(o);
+    await configApi.set(CFG_ORIENTATION, o);
+  }
+
+  async function changeView(v: View) {
+    setView(v);
+    await configApi.set(CFG_VIEW, v);
+    if (rootId) loadTree(rootId, v);
+  }
 
   async function handleSelect(p: PersonaListItem) {
     const name = `${p.apellido}, ${p.nombre}`;
@@ -157,12 +197,12 @@ export default function ArbolPage() {
         {root && (
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <div style={toggleGroup}>
-              <button style={{ ...toggleBtn, ...(view === 'bio' ? toggleActive : {}) }} onClick={() => setView('bio')}>Biológico</button>
-              <button style={{ ...toggleBtn, ...(view === 'adoptivo' ? toggleActive : {}) }} onClick={() => setView('adoptivo')}>Adoptivo</button>
+              <button style={{ ...toggleBtn, ...(view === 'bio' ? toggleActive : {}) }} onClick={() => changeView('bio')}>Biológico</button>
+              <button style={{ ...toggleBtn, ...(view === 'adoptivo' ? toggleActive : {}) }} onClick={() => changeView('adoptivo')}>Adoptivo</button>
             </div>
             <div style={toggleGroup}>
-              <button style={{ ...toggleBtn, ...(orientation === 'horizontal' ? toggleActive : {}) }} onClick={() => setOrientation('horizontal')} title="Horizontal">↔</button>
-              <button style={{ ...toggleBtn, ...(orientation === 'vertical' ? toggleActive : {}) }} onClick={() => setOrientation('vertical')} title="Vertical">↕</button>
+              <button style={{ ...toggleBtn, ...(orientation === 'horizontal' ? toggleActive : {}) }} onClick={() => changeOrientation('horizontal')} title="Horizontal">↔</button>
+              <button style={{ ...toggleBtn, ...(orientation === 'vertical' ? toggleActive : {}) }} onClick={() => changeOrientation('vertical')} title="Vertical">↕</button>
             </div>
           </div>
         )}
@@ -201,9 +241,16 @@ export default function ArbolPage() {
   );
 }
 
-const cardStyle: React.CSSProperties = { padding: '8px 12px', border: '1px solid #e4e4e4', borderRadius: 6, background: '#fff', cursor: 'pointer', minWidth: 148, width: 148, flexShrink: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' };
-const cardName: React.CSSProperties = { fontWeight: 600, fontSize: '0.82rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#1a1a1a' };
-const cardYear: React.CSSProperties = { fontSize: '0.72rem', color: '#aaa', marginTop: 2 };
+const cardStyle: React.CSSProperties = {
+  width: 148, height: 76, flexShrink: 0,
+  border: '1px solid #e4e4e4', borderRadius: 6, background: '#fff',
+  cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+  padding: '6px 8px', boxSizing: 'border-box', gap: 1,
+};
+const cardNombre: React.CSSProperties = { fontWeight: 700, fontSize: '0.82rem', color: '#1a1a1a', textAlign: 'center', width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
+const cardApellido: React.CSSProperties = { fontWeight: 400, fontSize: '0.82rem', color: '#444', textAlign: 'center', width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
+const cardLife: React.CSSProperties = { fontSize: '0.68rem', color: '#aaa', textAlign: 'center', width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 3 };
 const searchCard: React.CSSProperties = { background: '#fff', border: '1px solid #e4e4e4', borderRadius: 8, padding: 20, maxWidth: 420 };
 const backBtn: React.CSSProperties = { background: 'none', border: '1px solid #ddd', borderRadius: 4, padding: '5px 12px', cursor: 'pointer', fontSize: '0.85rem', color: '#555' };
 const changeBtn: React.CSSProperties = { background: 'none', border: '1px solid #ccc', borderRadius: 4, padding: '3px 10px', cursor: 'pointer', fontSize: '0.8rem', color: '#666' };

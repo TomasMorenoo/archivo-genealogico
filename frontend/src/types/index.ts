@@ -82,8 +82,16 @@ export interface AncestorNode {
   id: number;
   nombre: string;
   apellido: string;
-  nac_anio: number | null;
   sexo: string;
+  fallecida: boolean;
+  nac_dia: number | null;
+  nac_mes: number | null;
+  nac_anio: number | null;
+  nac_tipo: string;
+  def_dia: number | null;
+  def_mes: number | null;
+  def_anio: number | null;
+  def_tipo: string;
   padre?: AncestorNode;
   madre?: AncestorNode;
 }

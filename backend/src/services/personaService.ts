@@ -6,19 +6,27 @@ export interface AncestorNode {
   id: number;
   nombre: string;
   apellido: string;
-  nac_anio: number | null;
   sexo: string;
+  fallecida: boolean;
+  nac_dia: number | null;
+  nac_mes: number | null;
+  nac_anio: number | null;
+  nac_tipo: string;
+  def_dia: number | null;
+  def_mes: number | null;
+  def_anio: number | null;
+  def_tipo: string;
   padre?: AncestorNode;
   madre?: AncestorNode;
 }
 
 export function getAncestros(id: number, generaciones: number, view: 'bio' | 'adoptivo' = 'bio'): AncestorNode | null {
   const db = getDb();
-  const row = db.prepare('SELECT id, nombre, apellido, nac_anio, sexo FROM personas WHERE id = ?').get(id) as {
-    id: number; nombre: string; apellido: string; nac_anio: number | null; sexo: string;
-  } | null;
+  const row = db.prepare(
+    'SELECT id, nombre, apellido, sexo, fallecida, nac_dia, nac_mes, nac_anio, nac_tipo, def_dia, def_mes, def_anio, def_tipo FROM personas WHERE id = ?'
+  ).get(id) as any;
   if (!row) return null;
-  const node: AncestorNode = { ...row };
+  const node: AncestorNode = { ...row, fallecida: !!row.fallecida };
   if (generaciones > 1) {
     const padreTipos = view === 'adoptivo' ? [8, 1] : [6, 1];
     const madreTipos = view === 'adoptivo' ? [9, 2] : [7, 2];
@@ -84,11 +92,11 @@ export function getPersona(id: number): Persona | null {
     ...row,
     pid: formatPid(row.id),
     fallecida: !!row.fallecida,
-    nac_lugar: row.nac_ciudad ? {
+    nac_lugar: row.nac_lugar_id != null ? {
       id: row.nac_lugar_id, ciudad: row.nac_ciudad,
       provincia: row.nac_provincia, pais: row.nac_pais,
     } : null,
-    def_lugar: row.def_ciudad ? {
+    def_lugar: row.def_lugar_id != null ? {
       id: row.def_lugar_id, ciudad: row.def_ciudad,
       provincia: row.def_provincia, pais: row.def_pais,
     } : null,
