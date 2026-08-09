@@ -7,6 +7,9 @@ import path from 'path';
 const CHANGELOG_VERSION = 3;
 const CHANNEL = 'beta' as const;
 
+// Force separate userData so beta and official never share config or data paths
+app.setPath('userData', path.join(app.getPath('appData'), 'archivo-genealogico-beta'));
+
 interface StoreSchema {
   archivoRoot?: string;
   lastSeenChangelogId?: number;
