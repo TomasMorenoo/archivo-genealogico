@@ -124,6 +124,17 @@ app.whenReady().then(async () => {
   }
 });
 
+app.on('will-quit', (event) => {
+  event.preventDefault();
+  const serverPath = path.join(app.getAppPath(), 'backend', 'dist', 'server');
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require(serverPath).stopServer().finally(() => app.exit(0));
+  } catch {
+    app.exit(0);
+  }
+});
+
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
