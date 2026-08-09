@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { personasApi, configApi } from '../api/client';
 import type { AncestorNode } from '../types';
@@ -22,40 +22,7 @@ const PAPER_SIZES = [
   { label: 'A0  (841 × 1189 mm)', w: 841,  h: 1189, css: 'A0'  },
 ] as const;
 
-function printTree(wMm: number, hMm: number, cssSize: string) {
-  const el = document.getElementById('arbol-tree-content');
-  if (!el) return;
-
-  const treeW = el.scrollWidth;
-  const treeH = el.scrollHeight;
-  const margin = 15; // mm
-  const mmToPx = 96 / 25.4;
-
-  const fit = (pw: number, ph: number) =>
-    Math.min((pw - 2 * margin) * mmToPx / treeW, (ph - 2 * margin) * mmToPx / treeH);
-
-  const scalePortrait  = fit(wMm, hMm);
-  const scaleLandscape = fit(hMm, wMm);
-  const useLandscape   = scaleLandscape > scalePortrait;
-  const scale          = useLandscape ? scaleLandscape : scalePortrait;
-  const orient         = useLandscape ? 'landscape' : 'portrait';
-
-  const win = window.open('', '_blank', 'width=900,height=700');
-  if (!win) return;
-
-  win.document.write(`<!DOCTYPE html>
-<html><head><meta charset="utf-8"><style>
-  @page { size: ${cssSize} ${orient}; margin: ${margin}mm; }
-  * { box-sizing: border-box; }
-  body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-  .wrap { transform: scale(${scale}); transform-origin: top left;
-          width: ${treeW}px; height: ${treeH}px; display: inline-block; }
-</style></head><body>
-<div class="wrap">${el.innerHTML}</div>
-<script>window.onload=function(){window.print();window.close();}<\/script>
-</body></html>`);
-  win.document.close();
-}
+const MARGIN_OPTIONS = [5, 10, 15, 20, 25] as const;
 
 function fmtDate(dia: number | null, mes: number | null, anio: number | null, tipo: string): string {
   if (tipo === 'desconocida') return '';
@@ -162,6 +129,178 @@ function VBranch({ node, gen, navigate }: { node: AncestorNode; gen: number; nav
   );
 }
 
+// ─── PDF Export Modal ────────────────────────────────────────────────────────
+
+function PdfExportModal({ root, orientation, onClose }: {
+  root: AncestorNode;
+  orientation: Orientation;
+  onClose: () => void;
+}) {
+  const [paperIdx, setPaperIdx] = useState(1); // default A3
+  const [orientMode, setOrientMode] = useState<'auto' | 'portrait' | 'landscape'>('auto');
+  const [marginsMm, setMarginsMm] = useState(15);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const treeRef = useRef<HTMLDivElement>(null);
+
+  const paper = PAPER_SIZES[paperIdx];
+
+  // Calculate effective landscape based on tree aspect ratio
+  const treeEl = document.getElementById('arbol-tree-content');
+  const treeW = treeEl?.scrollWidth ?? 600;
+  const treeH = treeEl?.scrollHeight ?? 400;
+
+  const autoLandscape = treeW > treeH;
+  const effectiveLandscape = orientMode === 'auto' ? autoLandscape
+    : orientMode === 'landscape';
+
+  const pageW = effectiveLandscape ? paper.h : paper.w; // mm
+  const pageH = effectiveLandscape ? paper.w : paper.h; // mm
+
+  // Scale for actual PDF (96dpi CSS pixels)
+  const mmToPx = 96 / 25.4;
+  const pdfScale = Math.min(
+    (pageW - 2 * marginsMm) * mmToPx / treeW,
+    (pageH - 2 * marginsMm) * mmToPx / treeH
+  );
+  const scalePercent = Math.round(pdfScale * 100);
+
+  // Preview paper shape (fit in a max area)
+  const PREV_MAX_W = 440;
+  const PREV_MAX_H = 340;
+  const paperRatio = Math.min(PREV_MAX_W / pageW, PREV_MAX_H / pageH);
+  const prevPaperW = pageW * paperRatio;
+  const prevPaperH = pageH * paperRatio;
+
+  // Tree scale inside preview
+  const prevTreeScale = Math.min(
+    (pageW - 2 * marginsMm) * paperRatio / treeW,
+    (pageH - 2 * marginsMm) * paperRatio / treeH
+  );
+  const prevMarginPx = marginsMm * paperRatio;
+
+  async function handleSave() {
+    setSaving(true);
+    setError('');
+    const treeHtml = treeRef.current?.innerHTML ?? '';
+    const result = await window.electronAPI?.saveTreePdf({
+      treeHtml, treeW, treeH,
+      pageSize: paper.css,
+      landscape: effectiveLandscape,
+      marginsMm,
+    });
+    setSaving(false);
+    if (result?.ok) {
+      onClose();
+    } else if (result && !result.canceled) {
+      setError(result.error ?? 'Error al guardar');
+    }
+  }
+
+  const noop = () => {};
+
+  return (
+    <div style={pdfOverlay}>
+      <div style={pdfDialog}>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Guardar como PDF</h2>
+          <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.3rem', color: '#888' }}>×</button>
+        </div>
+
+        <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          {/* Settings panel */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 180 }}>
+            <div style={settingRow}>
+              <label style={settingLabel}>Tamaño</label>
+              <select value={paperIdx} onChange={e => setPaperIdx(Number(e.target.value))} style={selectStyle}>
+                {PAPER_SIZES.map((p, i) => (
+                  <option key={i} value={i}>{p.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={settingRow}>
+              <label style={settingLabel}>Orientación</label>
+              <div style={{ display: 'flex', border: '1px solid #ddd', borderRadius: 4, overflow: 'hidden' }}>
+                {(['auto', 'portrait', 'landscape'] as const).map(m => (
+                  <button key={m} onClick={() => setOrientMode(m)}
+                    style={{ ...miniToggle, ...(orientMode === m ? miniToggleActive : {}) }}>
+                    {m === 'auto' ? 'Auto' : m === 'portrait' ? '↕' : '↔'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={settingRow}>
+              <label style={settingLabel}>Márgenes</label>
+              <div style={{ display: 'flex', border: '1px solid #ddd', borderRadius: 4, overflow: 'hidden' }}>
+                {MARGIN_OPTIONS.map(m => (
+                  <button key={m} onClick={() => setMarginsMm(m)}
+                    style={{ ...miniToggle, ...(marginsMm === m ? miniToggleActive : {}) }}>
+                    {m}mm
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ fontSize: '0.8rem', color: '#888', paddingTop: 4 }}>
+              <div>Hoja: {pageW} × {pageH} mm</div>
+              <div>Escala: <strong style={{ color: scalePercent < 30 ? '#c00' : '#333' }}>{scalePercent}%</strong></div>
+              {scalePercent < 30 && (
+                <div style={{ color: '#c00', marginTop: 4, fontSize: '0.75rem' }}>
+                  El árbol es muy grande para esta hoja. Probá A1 o A0.
+                </div>
+              )}
+            </div>
+
+            {error && <div style={{ color: '#c00', fontSize: '0.82rem' }}>{error}</div>}
+
+            <button onClick={handleSave} disabled={saving} style={savePdfBtn}>
+              {saving ? 'Guardando...' : 'Guardar PDF'}
+            </button>
+          </div>
+
+          {/* Preview */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+            <p style={{ margin: 0, fontSize: '0.75rem', color: '#aaa' }}>Vista previa</p>
+            <div style={{
+              width: prevPaperW, height: prevPaperH,
+              background: '#fff', boxShadow: '0 2px 16px rgba(0,0,0,0.18)',
+              position: 'relative', overflow: 'hidden', flexShrink: 0,
+            }}>
+              {/* Margin indicator */}
+              <div style={{
+                position: 'absolute',
+                top: prevMarginPx, left: prevMarginPx,
+                width: prevPaperW - 2 * prevMarginPx,
+                height: prevPaperH - 2 * prevMarginPx,
+                border: '1px dashed #e0e0e0',
+                overflow: 'hidden',
+              }}>
+                <div style={{
+                  transformOrigin: 'top left',
+                  transform: `scale(${prevTreeScale})`,
+                  display: 'inline-block',
+                }}>
+                  <div ref={treeRef}>
+                    {orientation === 'horizontal'
+                      ? <HBranch node={root} gen={1} navigate={noop} />
+                      : <VBranch node={root} gen={1} navigate={noop} />
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ───────────────────────────────────────────────────────────────
+
 export default function ArbolPage() {
   const navigate = useNavigate();
   const [rootId, setRootId] = useState<number | null>(null);
@@ -170,7 +309,7 @@ export default function ArbolPage() {
   const [loading, setLoading] = useState(false);
   const [orientation, setOrientation] = useState<Orientation>('vertical');
   const [view, setView] = useState<View>('bio');
-  const [showPrint, setShowPrint] = useState(false);
+  const [showPdf, setShowPdf] = useState(false);
 
   async function loadTree(id: number, v: View) {
     setLoading(true);
@@ -248,20 +387,7 @@ export default function ArbolPage() {
               <button style={{ ...toggleBtn, ...(orientation === 'horizontal' ? toggleActive : {}) }} onClick={() => changeOrientation('horizontal')} title="Horizontal">↔</button>
               <button style={{ ...toggleBtn, ...(orientation === 'vertical' ? toggleActive : {}) }} onClick={() => changeOrientation('vertical')} title="Vertical">↕</button>
             </div>
-            <div style={{ position: 'relative' }}>
-              <button style={printBtn} onClick={() => setShowPrint(s => !s)}>Imprimir</button>
-              {showPrint && (
-                <div style={printDropdown}>
-                  <p style={{ margin: '0 0 8px', fontSize: '0.78rem', color: '#888', fontWeight: 600 }}>Tamaño de hoja</p>
-                  {PAPER_SIZES.map(p => (
-                    <button key={p.css} style={printOption}
-                      onClick={() => { setShowPrint(false); printTree(p.w, p.h, p.css); }}>
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <button style={pdfBtn} onClick={() => setShowPdf(true)}>Guardar PDF</button>
           </div>
         )}
       </div>
@@ -295,9 +421,15 @@ export default function ArbolPage() {
           </div>
         </>
       )}
+
+      {showPdf && root && (
+        <PdfExportModal root={root} orientation={orientation} onClose={() => setShowPdf(false)} />
+      )}
     </div>
   );
 }
+
+// ─── Styles ──────────────────────────────────────────────────────────────────
 
 const cardStyle: React.CSSProperties = {
   width: 148, height: 76, flexShrink: 0,
@@ -315,15 +447,20 @@ const changeBtn: React.CSSProperties = { background: 'none', border: '1px solid 
 const toggleGroup: React.CSSProperties = { display: 'flex', border: '1px solid #ddd', borderRadius: 4, overflow: 'hidden' };
 const toggleBtn: React.CSSProperties = { border: 'none', background: '#f5f5f5', cursor: 'pointer', padding: '5px 11px', fontSize: '0.82rem', color: '#555' };
 const toggleActive: React.CSSProperties = { background: '#1a1a1a', color: '#fff' };
-const printBtn: React.CSSProperties = { border: '1px solid #ddd', background: '#f5f5f5', cursor: 'pointer', padding: '5px 11px', borderRadius: 4, fontSize: '0.82rem', color: '#555' };
-const printDropdown: React.CSSProperties = {
-  position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 50,
-  background: '#fff', border: '1px solid #ddd', borderRadius: 6,
-  boxShadow: '0 4px 16px rgba(0,0,0,0.12)', padding: '10px 12px',
-  display: 'flex', flexDirection: 'column', gap: 4, minWidth: 210,
+const pdfBtn: React.CSSProperties = { border: '1px solid #1a1a1a', background: '#1a1a1a', color: '#fff', cursor: 'pointer', padding: '5px 12px', borderRadius: 4, fontSize: '0.82rem', fontWeight: 600 };
+
+const pdfOverlay: React.CSSProperties = {
+  position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
 };
-const printOption: React.CSSProperties = {
-  border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left',
-  padding: '6px 8px', borderRadius: 4, fontSize: '0.82rem', color: '#333',
-  fontFamily: 'monospace',
+const pdfDialog: React.CSSProperties = {
+  background: '#fafafa', borderRadius: 10, padding: 28,
+  width: '90vw', maxWidth: 760, maxHeight: '90vh', overflowY: 'auto',
+  boxShadow: '0 8px 40px rgba(0,0,0,0.22)',
 };
+const settingRow: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 5 };
+const settingLabel: React.CSSProperties = { fontSize: '0.78rem', color: '#888', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' };
+const selectStyle: React.CSSProperties = { padding: '5px 8px', border: '1px solid #ddd', borderRadius: 4, fontSize: '0.85rem', background: '#fff' };
+const miniToggle: React.CSSProperties = { border: 'none', background: '#f5f5f5', cursor: 'pointer', padding: '4px 10px', fontSize: '0.78rem', color: '#555' };
+const miniToggleActive: React.CSSProperties = { background: '#1a1a1a', color: '#fff' };
+const savePdfBtn: React.CSSProperties = { background: '#1a1a1a', color: '#fff', border: 'none', padding: '10px 0', borderRadius: 5, cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem', marginTop: 8 };

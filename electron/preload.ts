@@ -19,4 +19,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('navigate', (_e, path) => cb(path));
     return () => ipcRenderer.removeAllListeners('navigate');
   },
+  saveTreePdf: (opts: { treeHtml: string; treeW: number; treeH: number; pageSize: string; landscape: boolean; marginsMm: number }): Promise<{ ok: boolean; canceled?: boolean; filePath?: string; error?: string }> =>
+    ipcRenderer.invoke('save-tree-pdf', opts),
 });

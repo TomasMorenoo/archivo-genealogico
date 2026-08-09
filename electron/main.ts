@@ -58,6 +58,61 @@ function createWindow(): void {
 
 ipcMain.handle('get-version', () => app.getVersion());
 ipcMain.handle('open-file', (_event, filePath: string) => shell.openPath(filePath));
+ipcMain.handle('save-tree-pdf', async (_event, opts: {
+  treeHtml: string; treeW: number; treeH: number;
+  pageSize: string; landscape: boolean; marginsMm: number;
+}) => {
+  if (!mainWindow) return { ok: false, error: 'No window' };
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: 'Guardar árbol como PDF',
+    defaultPath: 'arbol-genealogico.pdf',
+    filters: [{ name: 'PDF', extensions: ['pdf'] }],
+  });
+  if (result.canceled || !result.filePath) return { ok: false, canceled: true };
+
+  const fs = await import('fs');
+  const os = await import('os');
+  const tmpFile = path.join(os.tmpdir(), `arbol-pdf-${Date.now()}.html`);
+
+  const html = `<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { margin: ${opts.marginsMm}mm; background: #fff; font-family: system-ui, -apple-system, sans-serif; }
+</style>
+</head><body>
+<div style="display:inline-block;">${opts.treeHtml}</div>
+</body></html>`;
+
+  fs.writeFileSync(tmpFile, html, 'utf8');
+
+  const hidden = new BrowserWindow({
+    width: Math.ceil(opts.treeW + 2 * opts.marginsMm * (96 / 25.4)) + 40,
+    height: Math.ceil(opts.treeH + 2 * opts.marginsMm * (96 / 25.4)) + 40,
+    show: false,
+    webPreferences: { nodeIntegration: false, contextIsolation: true },
+  });
+
+  await hidden.loadFile(tmpFile);
+
+  const marginsMicrons = opts.marginsMm * 1000;
+  let buf: Buffer;
+  try {
+    buf = await hidden.webContents.printToPDF({
+      pageSize: opts.pageSize as Electron.PrintToPDFOptions['pageSize'],
+      landscape: opts.landscape,
+      printBackground: true,
+      margins: { marginType: 'custom', top: marginsMicrons, bottom: marginsMicrons, left: marginsMicrons, right: marginsMicrons },
+    });
+  } finally {
+    hidden.close();
+    try { fs.unlinkSync(tmpFile); } catch { /* ignore */ }
+  }
+
+  fs.writeFileSync(result.filePath, buf);
+  return { ok: true, filePath: result.filePath };
+});
 ipcMain.handle('check-whats-new', () => {
   const lastSeenId = store.get('lastSeenChangelogId', 0);
   const isNew = lastSeenId < CHANGELOG_VERSION;
