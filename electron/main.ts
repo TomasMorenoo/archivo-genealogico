@@ -5,6 +5,7 @@ import path from 'path';
 
 interface StoreSchema {
   archivoRoot?: string;
+  lastSeenVersion?: string;
 }
 
 const store = new Store<StoreSchema>();
@@ -53,6 +54,13 @@ function createWindow(): void {
 
 ipcMain.handle('get-version', () => app.getVersion());
 ipcMain.handle('open-file', (_event, filePath: string) => shell.openPath(filePath));
+ipcMain.handle('check-whats-new', () => {
+  const current = app.getVersion();
+  const last = store.get('lastSeenVersion');
+  const isNew = last !== current;
+  if (isNew) store.set('lastSeenVersion', current);
+  return { isNew, version: current };
+});
 
 ipcMain.handle('get-archivo-root', () => {
   return store.get('archivoRoot') ?? null;

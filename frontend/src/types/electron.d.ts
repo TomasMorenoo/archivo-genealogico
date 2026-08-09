@@ -3,6 +3,7 @@ interface ElectronAPI {
   selectArchivoRoot: () => Promise<string | null>;
   getVersion: () => Promise<string>;
   openFile: (filePath: string) => Promise<string>;
+  checkWhatsNew: () => Promise<{ isNew: boolean; version: string }>;
 }
 
 declare global {

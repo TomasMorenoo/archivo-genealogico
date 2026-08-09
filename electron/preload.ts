@@ -9,4 +9,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('get-version'),
   openFile: (filePath: string): Promise<string> =>
     ipcRenderer.invoke('open-file', filePath),
+  checkWhatsNew: (): Promise<{ isNew: boolean; version: string }> =>
+    ipcRenderer.invoke('check-whats-new'),
 });
