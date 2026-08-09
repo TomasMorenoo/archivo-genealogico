@@ -2,42 +2,6 @@ import { getDb } from '../db/database';
 import type { Persona, PersonaListItem } from '../types';
 import { deletePersonaFolder, renumberPersonaFolders } from './fileSystemService';
 
-export interface AncestorNode {
-  id: number;
-  nombre: string;
-  apellido: string;
-  nac_anio: number | null;
-  sexo: string;
-  padre?: AncestorNode;
-  madre?: AncestorNode;
-}
-
-export function getAncestros(id: number, generaciones: number, view: 'bio' | 'adoptivo' = 'bio'): AncestorNode | null {
-  const db = getDb();
-  const row = db.prepare('SELECT id, nombre, apellido, nac_anio, sexo FROM personas WHERE id = ?').get(id) as {
-    id: number; nombre: string; apellido: string; nac_anio: number | null; sexo: string;
-  } | null;
-  if (!row) return null;
-  const node: AncestorNode = { ...row };
-  if (generaciones > 1) {
-    // For bio: prefer tipo 6 (padre biológico) over 1 (padre); for adoptivo: prefer tipo 8 (padre adoptivo) over 1
-    const padreTipos = view === 'adoptivo' ? [8, 1] : [6, 1];
-    const madreTipos = view === 'adoptivo' ? [9, 2] : [7, 2];
-    const padreRow = db.prepare(`
-      SELECT persona_destino_id as id FROM relaciones
-      WHERE persona_origen_id = ? AND tipo_relacion_id IN (${padreTipos.join(',')})
-      ORDER BY CASE tipo_relacion_id WHEN ${padreTipos[0]} THEN 0 ELSE 1 END LIMIT 1
-    `).get(id) as { id: number } | null;
-    const madreRow = db.prepare(`
-      SELECT persona_destino_id as id FROM relaciones
-      WHERE persona_origen_id = ? AND tipo_relacion_id IN (${madreTipos.join(',')})
-      ORDER BY CASE tipo_relacion_id WHEN ${madreTipos[0]} THEN 0 ELSE 1 END LIMIT 1
-    `).get(id) as { id: number } | null;
-    if (padreRow) node.padre = getAncestros(padreRow.id, generaciones - 1, view) ?? undefined;
-    if (madreRow) node.madre = getAncestros(madreRow.id, generaciones - 1, view) ?? undefined;
-  }
-  return node;
-}
 
 export function formatPid(id: number): string {
   return `P${String(id).padStart(5, '0')}`;

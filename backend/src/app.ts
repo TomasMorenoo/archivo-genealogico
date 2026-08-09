@@ -6,7 +6,6 @@ import { relacionesRouter } from './routes/relaciones';
 import { documentosRouter } from './routes/documentos';
 import { lugaresRouter } from './routes/lugares';
 import { archivosRouter } from './routes/archivos';
-import { configRouter } from './routes/config';
 
 export function createApp() {
   const app = express();
@@ -18,6 +17,5 @@ export function createApp() {
   app.use('/api/documentos', documentosRouter);
   app.use('/api/lugares', lugaresRouter);
   app.use('/api/archivos', archivosRouter);
-  app.use('/api/config', configRouter);
   return app;
 }

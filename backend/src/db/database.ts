@@ -23,7 +23,6 @@ export function getDb(): Database.Database {
     db.exec(schema);
     try { db.exec('ALTER TABLE personas ADD COLUMN fallecida INTEGER NOT NULL DEFAULT 0'); } catch {}
     try { db.exec('ALTER TABLE personas ADD COLUMN dni TEXT'); } catch {}
-    try { db.exec('CREATE TABLE IF NOT EXISTS configuracion (clave TEXT PRIMARY KEY, valor TEXT NOT NULL)'); } catch {}
     runMigrations(db);
   }
   return db;
