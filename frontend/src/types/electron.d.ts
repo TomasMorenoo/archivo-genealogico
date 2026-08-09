@@ -3,7 +3,7 @@ interface ElectronAPI {
   selectArchivoRoot: () => Promise<string | null>;
   getVersion: () => Promise<string>;
   openFile: (filePath: string) => Promise<string>;
-  checkWhatsNew: () => Promise<{ isNew: boolean; lastSeenId: number }>;
+  checkWhatsNew: () => Promise<{ isNew: boolean; lastSeenId: number; channel: 'stable' | 'beta' }>;
   onOpenWhatsNew: (cb: () => void) => () => void;
   onNavigate: (cb: (path: string) => void) => () => void;
 }

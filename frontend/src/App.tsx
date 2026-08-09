@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import PersonaPage from './pages/PersonaPage';
@@ -18,7 +18,8 @@ function NavigationHandler() {
 
 export default function App() {
   const [ready, setReady] = useState<boolean | null>(null);
-  const [whatsNew, setWhatsNew] = useState<{ lastSeenId: number } | null>(null);
+  const [whatsNew, setWhatsNew] = useState<{ lastSeenId: number; channel: 'stable' | 'beta' } | null>(null);
+  const channelRef = useRef<'stable' | 'beta'>('stable');
 
   useEffect(() => {
     if (!window.electronAPI) {
@@ -28,11 +29,12 @@ export default function App() {
     window.electronAPI.getArchivoRoot().then(root => {
       setReady(root !== null);
     });
-    window.electronAPI.checkWhatsNew().then(({ isNew, lastSeenId }) => {
-      if (isNew) setWhatsNew({ lastSeenId });
+    window.electronAPI.checkWhatsNew().then(({ isNew, lastSeenId, channel }) => {
+      channelRef.current = channel;
+      if (isNew) setWhatsNew({ lastSeenId, channel });
     });
     const unlisten = window.electronAPI.onOpenWhatsNew(() => {
-      setWhatsNew({ lastSeenId: 0 });
+      setWhatsNew({ lastSeenId: 0, channel: channelRef.current });
     });
     return unlisten;
   }, []);
@@ -48,7 +50,7 @@ export default function App() {
         <Route path="/persona/:id" element={<PersonaPage />} />
         <Route path="/migracion-lugares" element={<MigracionLugaresPage />} />
       </Routes>
-      {whatsNew && <WhatsNew lastSeenId={whatsNew.lastSeenId} onClose={() => setWhatsNew(null)} />}
+      {whatsNew && <WhatsNew lastSeenId={whatsNew.lastSeenId} channel={whatsNew.channel} onClose={() => setWhatsNew(null)} />}
     </>
   );
 }

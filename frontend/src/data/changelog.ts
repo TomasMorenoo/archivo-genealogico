@@ -6,6 +6,7 @@ export interface ChangelogSection {
 export interface ChangelogEntry {
   id: number;
   label: string; // short label shown in nav, e.g. "v1.0.35" or "Ago 2026"
+  channel?: 'stable' | 'beta'; // default = 'stable'
   sections: ChangelogSection[];
 }
 

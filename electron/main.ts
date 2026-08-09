@@ -3,8 +3,9 @@ import { autoUpdater } from 'electron-updater';
 import Store from 'electron-store';
 import path from 'path';
 
-// Increment this whenever user-visible changes are added to frontend/src/data/changelog.ts
-const CHANGELOG_VERSION = 2; // matches CURRENT_CHANGELOG_ID in frontend/src/data/changelog.ts
+// Increment when new stable changelog entries are added (id of the latest stable entry)
+const CHANGELOG_VERSION = 2;
+const CHANNEL = 'stable' as const;
 
 interface StoreSchema {
   archivoRoot?: string;
@@ -61,7 +62,7 @@ ipcMain.handle('check-whats-new', () => {
   const lastSeenId = store.get('lastSeenChangelogId', 0);
   const isNew = lastSeenId < CHANGELOG_VERSION;
   if (isNew) store.set('lastSeenChangelogId', CHANGELOG_VERSION);
-  return { isNew, lastSeenId };
+  return { isNew, lastSeenId, channel: CHANNEL };
 });
 
 ipcMain.handle('get-archivo-root', () => {
