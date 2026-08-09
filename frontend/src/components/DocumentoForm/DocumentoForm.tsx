@@ -15,8 +15,8 @@ interface Props {
 }
 
 export default function DocumentoForm({ defaultPersona, onSaved, onCancel }: Props) {
-  const [titulo, setTitulo] = useState('');
   const [tipo, setTipo] = useState(TIPOS_DOCUMENTO[0]);
+  const [tituloCustom, setTituloCustom] = useState('');
   const [anio, setAnio] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -36,6 +36,7 @@ export default function DocumentoForm({ defaultPersona, onSaved, onCancel }: Pro
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const titulo = tipo === 'Otro' ? tituloCustom : tipo;
     const effectivePrincipales = principales.length > 0
       ? principales.map(p => p.id)
       : defaultPersonaId ? [defaultPersonaId] : [];
@@ -59,18 +60,27 @@ export default function DocumentoForm({ defaultPersona, onSaved, onCancel }: Pro
 
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={f}><label>Título *</label>
-        <input required value={titulo} onChange={e => setTitulo(e.target.value)} style={inp} placeholder="Partida de nacimiento de..." />
-      </div>
-      <div style={f}><label>Tipo *</label>
+      <div style={f}>
+        <label>Tipo *</label>
         <select value={tipo} onChange={e => setTipo(e.target.value)} style={inp}>
           {TIPOS_DOCUMENTO.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
       </div>
-      <div style={f}><label>Año</label>
+
+      {tipo === 'Otro' && (
+        <div style={f}>
+          <label>Título *</label>
+          <input required value={tituloCustom} onChange={e => setTituloCustom(e.target.value)} style={inp} placeholder="Descripción del documento..." />
+        </div>
+      )}
+
+      <div style={f}>
+        <label>Año</label>
         <input type="number" placeholder="ej. 1978" value={anio} onChange={e => setAnio(e.target.value)} style={inp} />
       </div>
-      <div style={f}><label>Descripción</label>
+
+      <div style={f}>
+        <label>Descripción</label>
         <textarea rows={2} value={descripcion} onChange={e => setDescripcion(e.target.value)} style={{ ...inp, resize: 'vertical' }} />
       </div>
 
@@ -105,8 +115,9 @@ export default function DocumentoForm({ defaultPersona, onSaved, onCancel }: Pro
         <PersonaSearchInput excludeIds={allSelectedIds} onSelect={p => setMencionadas(l => [...l, p])} placeholder="Buscar persona mencionada..." />
       </div>
 
-      <div style={f}><label>Archivo (opcional)</label>
-        <input type="file" onChange={e => setFile(e.target.files?.[0] ?? null)} style={{ fontSize: '0.9rem' }} />
+      <div style={f}>
+        <label>Archivo (PDF o imagen)</label>
+        <input type="file" accept=".pdf,image/*" onChange={e => setFile(e.target.files?.[0] ?? null)} style={{ fontSize: '0.9rem' }} />
       </div>
 
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
