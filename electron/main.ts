@@ -4,7 +4,7 @@ import Store from 'electron-store';
 import path from 'path';
 
 // Increment this whenever user-visible changes are added to frontend/src/data/changelog.ts
-const CHANGELOG_VERSION = 2;
+const CHANGELOG_VERSION = 2; // matches CURRENT_CHANGELOG_ID in frontend/src/data/changelog.ts
 
 interface StoreSchema {
   archivoRoot?: string;

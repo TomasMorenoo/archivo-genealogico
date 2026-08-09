@@ -1,31 +1,61 @@
+import { useState } from 'react';
 import { CHANGELOG } from '../../data/changelog';
 
 interface Props {
-  lastSeenId: number;
+  lastSeenId: number; // 0 = show all (from menu)
   onClose: () => void;
 }
 
 export default function WhatsNew({ lastSeenId, onClose }: Props) {
   const entries = lastSeenId === 0
-    ? CHANGELOG
-    : CHANGELOG.filter(e => e.id > lastSeenId);
+    ? [...CHANGELOG].reverse()
+    : [...CHANGELOG].filter(e => e.id > lastSeenId).reverse();
+
+  const [idx, setIdx] = useState(0); // 0 = most recent
 
   if (entries.length === 0) return null;
 
-  const allSections = entries.flatMap(e => e.sections);
+  const entry = entries[idx];
+  const isFirst = idx === 0;
+  const isLast = idx === entries.length - 1;
 
   return (
     <div style={overlay}>
       <div style={dialog}>
+        {/* Header */}
         <div style={{ marginBottom: 20 }}>
           <p style={{ color: '#888', fontSize: '0.8rem', marginBottom: 4 }}>
             {lastSeenId === 0 ? 'Historial de novedades' : 'Actualización instalada'}
           </p>
-          <h2 style={{ fontSize: '1.3rem', fontWeight: 700 }}>Novedades</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, flex: 1 }}>
+              Novedades · {entry.label}
+            </h2>
+            {entries.length > 1 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <button
+                  onClick={() => setIdx(i => i + 1)}
+                  disabled={isLast}
+                  style={{ ...navBtn, opacity: isLast ? 0.3 : 1 }}
+                  title="Versión anterior"
+                >←</button>
+                <span style={{ fontSize: '0.75rem', color: '#aaa', minWidth: 36, textAlign: 'center' }}>
+                  {idx + 1}/{entries.length}
+                </span>
+                <button
+                  onClick={() => setIdx(i => i - 1)}
+                  disabled={isFirst}
+                  style={{ ...navBtn, opacity: isFirst ? 0.3 : 1 }}
+                  title="Versión siguiente"
+                >→</button>
+              </div>
+            )}
+          </div>
         </div>
 
+        {/* Content */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {allSections.map((s, i) => (
+          {entry.sections.map((s, i) => (
             <div key={i}>
               <p style={{ fontWeight: 600, marginBottom: 6, color: '#333' }}>{s.title}</p>
               <ul style={{ paddingLeft: 18, margin: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -37,7 +67,9 @@ export default function WhatsNew({ lastSeenId, onClose }: Props) {
           ))}
         </div>
 
-        <button onClick={onClose} style={btn}>Entendido</button>
+        <button onClick={onClose} style={btn}>
+          {isFirst ? 'Entendido' : 'Cerrar'}
+        </button>
       </div>
     </div>
   );
@@ -56,4 +88,8 @@ const btn: React.CSSProperties = {
   marginTop: 24, width: '100%', background: '#1a1a1a', color: '#fff',
   border: 'none', padding: '10px 0', borderRadius: 5, cursor: 'pointer',
   fontWeight: 600, fontSize: '0.95rem',
+};
+const navBtn: React.CSSProperties = {
+  border: '1px solid #ddd', background: '#f5f5f5', borderRadius: 4,
+  padding: '3px 10px', cursor: 'pointer', fontSize: '0.9rem', color: '#444',
 };
