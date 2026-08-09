@@ -118,5 +118,22 @@ export function updatePersona(id: number, input: Partial<CreatePersonaInput>): P
 }
 
 export function deletePersona(id: number): void {
-  getDb().prepare('DELETE FROM personas WHERE id = ?').run(id);
+  const db = getDb();
+  db.pragma('foreign_keys = OFF');
+  db.transaction(() => {
+    // Delete cascaded rows manually
+    db.prepare('DELETE FROM relaciones WHERE persona_origen_id = ? OR persona_destino_id = ?').run(id, id);
+    db.prepare('DELETE FROM documento_personas WHERE persona_id = ?').run(id);
+    db.prepare('DELETE FROM eventos WHERE persona_id = ?').run(id);
+    db.prepare('DELETE FROM personas WHERE id = ?').run(id);
+
+    // Renumber all ids above the deleted one
+    db.prepare('UPDATE relaciones SET persona_origen_id = persona_origen_id - 1 WHERE persona_origen_id > ?').run(id);
+    db.prepare('UPDATE relaciones SET persona_destino_id = persona_destino_id - 1 WHERE persona_destino_id > ?').run(id);
+    db.prepare('UPDATE documento_personas SET persona_id = persona_id - 1 WHERE persona_id > ?').run(id);
+    db.prepare('UPDATE eventos SET persona_id = persona_id - 1 WHERE persona_id > ?').run(id);
+    db.prepare('UPDATE personas SET id = id - 1 WHERE id > ?').run(id);
+    db.prepare("UPDATE sqlite_sequence SET seq = seq - 1 WHERE name = 'personas'").run();
+  })();
+  db.pragma('foreign_keys = ON');
 }
