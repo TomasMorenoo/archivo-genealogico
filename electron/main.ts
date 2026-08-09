@@ -73,10 +73,6 @@ ipcMain.handle('save-tree-pdf', async (_event, opts: {
   });
   if (result.canceled || !result.filePath) return { ok: false, canceled: true };
 
-  const fs = await import('fs');
-  const os = await import('os');
-  const tmpFile = path.join(os.tmpdir(), `arbol-pdf-${Date.now()}.html`);
-
   const html = `<!DOCTYPE html>
 <html><head>
 <meta charset="utf-8">
@@ -88,33 +84,34 @@ ipcMain.handle('save-tree-pdf', async (_event, opts: {
 <div style="display:inline-block;">${opts.treeHtml}</div>
 </body></html>`;
 
-  fs.writeFileSync(tmpFile, html, 'utf8');
+  const dataUrl = `data:text/html;base64,${Buffer.from(html).toString('base64')}`;
 
   const hidden = new BrowserWindow({
-    width: Math.ceil(opts.treeW + 2 * opts.marginsMm * (96 / 25.4)) + 40,
-    height: Math.ceil(opts.treeH + 2 * opts.marginsMm * (96 / 25.4)) + 40,
+    width: Math.min(Math.ceil(opts.treeW) + 100, 16000),
+    height: Math.min(Math.ceil(opts.treeH) + 100, 16000),
     show: false,
     webPreferences: { nodeIntegration: false, contextIsolation: true },
   });
 
-  await hidden.loadFile(tmpFile);
-
-  const marginsMicrons = opts.marginsMm * 1000;
-  let buf: Buffer;
   try {
-    buf = await hidden.webContents.printToPDF({
+    await hidden.loadURL(dataUrl);
+
+    const marginsMicrons = opts.marginsMm * 1000;
+    const buf = await hidden.webContents.printToPDF({
       pageSize: opts.pageSize as Electron.PrintToPDFOptions['pageSize'],
       landscape: opts.landscape,
       printBackground: true,
       margins: { marginType: 'custom', top: marginsMicrons, bottom: marginsMicrons, left: marginsMicrons, right: marginsMicrons },
     });
+
+    const fs = await import('fs');
+    fs.writeFileSync(result.filePath, buf);
+    return { ok: true, filePath: result.filePath };
+  } catch (err) {
+    return { ok: false, error: String(err) };
   } finally {
     hidden.close();
-    try { fs.unlinkSync(tmpFile); } catch { /* ignore */ }
   }
-
-  fs.writeFileSync(result.filePath, buf);
-  return { ok: true, filePath: result.filePath };
 });
 ipcMain.handle('check-whats-new', () => {
   const lastSeenId = store.get('lastSeenChangelogId', 0);
