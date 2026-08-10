@@ -33,18 +33,13 @@ function sortByAge(a: PersonBase, b: PersonBase): number {
   return a.nac_anio - b.nac_anio;
 }
 
-// Split siblings: older (< root year) go left, younger (>= root year) go right
-function splitSiblings(root: AncestorNode, siblings: SiblingNode[]): { left: SiblingNode[]; right: SiblingNode[] } {
-  const ry = root.nac_anio;
-  const left: SiblingNode[] = [];
-  const right: SiblingNode[] = [];
-  for (const s of siblings) {
-    if (ry != null && s.nac_anio != null && s.nac_anio < ry) left.push(s);
-    else right.push(s);
+// Male → all sibs left + spacers right (root centered). Female → spacers left + all sibs right.
+function buildSibLayout(root: AncestorNode, siblings: SiblingNode[]) {
+  const sorted = [...siblings].sort(sortByAge);
+  if (root.sexo === 'M') {
+    return { left: sorted, right: [] as SiblingNode[], leftSpacers: 0, rightSpacers: sorted.length };
   }
-  left.sort(sortByAge);
-  right.sort(sortByAge);
-  return { left, right };
+  return { left: [] as SiblingNode[], right: sorted, leftSpacers: sorted.length, rightSpacers: 0 };
 }
 
 function fmtDate(dia: number | null, mes: number | null, anio: number | null, tipo: string): string {
@@ -119,9 +114,7 @@ function HBranch({ node, gen, navigate, siblings }: { node: AncestorNode; gen: n
   const hasParents = !!(padre || madre);
   const sibList = siblings ?? [];
   const hasSiblings = sibList.length > 0;
-  const { left, right } = hasSiblings ? splitSiblings(node, sibList) : { left: [], right: [] };
-  const leftSpacers = Math.max(0, right.length - left.length);
-  const rightSpacers = Math.max(0, left.length - right.length);
+  const { left, right, leftSpacers, rightSpacers } = hasSiblings ? buildSibLayout(node, sibList) : { left: [], right: [], leftSpacers: 0, rightSpacers: 0 };
 
   return (
     <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -132,13 +125,13 @@ function HBranch({ node, gen, navigate, siblings }: { node: AncestorNode; gen: n
       )}
       {hasParents && (
         <>
-          <div style={{ width: 20, height: 2, background: '#d8d8d8', flexShrink: 0 }} />
+          <div style={{ width: 8, height: 2, background: '#d8d8d8', flexShrink: 0 }} />
           <div style={{ display: 'flex', alignItems: 'stretch' }}>
-            <div style={{ width: 10, flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ width: 8, flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
               {padre && madre ? (
                 <>
-                  <div style={{ flex: 1, borderRight: '2px solid #d8d8d8', borderBottom: '2px solid #d8d8d8' }} />
-                  <div style={{ flex: 1, borderRight: '2px solid #d8d8d8', borderTop: '2px solid #d8d8d8' }} />
+                  <div style={{ flex: 1, borderRight: '2px solid #d8d8d8', borderBottom: '2px solid #d8d8d8', borderBottomRightRadius: 6 }} />
+                  <div style={{ flex: 1, borderRight: '2px solid #d8d8d8', borderTop: '2px solid #d8d8d8', borderTopRightRadius: 6 }} />
                 </>
               ) : (
                 <div style={{ flex: 1, borderRight: '2px solid #d8d8d8' }} />
@@ -147,13 +140,13 @@ function HBranch({ node, gen, navigate, siblings }: { node: AncestorNode; gen: n
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {padre && (
                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{ width: 10, height: 2, background: '#d8d8d8', flexShrink: 0 }} />
+                  <div style={{ width: 8, height: 2, background: '#d8d8d8', flexShrink: 0 }} />
                   <HBranch node={padre} gen={gen + 1} navigate={navigate} />
                 </div>
               )}
               {madre && (
                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{ width: 10, height: 2, background: '#d8d8d8', flexShrink: 0 }} />
+                  <div style={{ width: 8, height: 2, background: '#d8d8d8', flexShrink: 0 }} />
                   <HBranch node={madre} gen={gen + 1} navigate={navigate} />
                 </div>
               )}
@@ -172,29 +165,27 @@ function VBranch({ node, gen, navigate, siblings }: { node: AncestorNode; gen: n
   const hasParents = !!(padre || madre);
   const sibList = siblings ?? [];
   const hasSiblings = sibList.length > 0;
-  const { left, right } = hasSiblings ? splitSiblings(node, sibList) : { left: [], right: [] };
-  const leftSpacers = Math.max(0, right.length - left.length);
-  const rightSpacers = Math.max(0, left.length - right.length);
+  const { left, right, leftSpacers, rightSpacers } = hasSiblings ? buildSibLayout(node, sibList) : { left: [], right: [], leftSpacers: 0, rightSpacers: 0 };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       {hasParents && (
         <>
-          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', borderBottom: '2px solid #d8d8d8' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', borderBottom: '2px solid #d8d8d8' }}>
             {padre && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <VBranch node={padre} gen={gen + 1} navigate={navigate} />
-                <div style={{ width: 2, height: 16, background: '#d8d8d8' }} />
+                <div style={{ width: 2, height: 10, background: '#d8d8d8' }} />
               </div>
             )}
             {madre && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <VBranch node={madre} gen={gen + 1} navigate={navigate} />
-                <div style={{ width: 2, height: 16, background: '#d8d8d8' }} />
+                <div style={{ width: 2, height: 10, background: '#d8d8d8' }} />
               </div>
             )}
           </div>
-          <div style={{ width: 2, height: 16, background: '#d8d8d8', flexShrink: 0 }} />
+          <div style={{ width: 2, height: 10, background: '#d8d8d8', flexShrink: 0 }} />
         </>
       )}
       {hasSiblings ? (
