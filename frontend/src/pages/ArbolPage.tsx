@@ -33,10 +33,18 @@ function sortByAge(a: PersonBase, b: PersonBase): number {
   return a.nac_anio - b.nac_anio;
 }
 
-// Root at tip: male → root at right end; female → root at left end
-function buildChildrenList(root: AncestorNode, siblings: SiblingNode[]): PersonBase[] {
-  const sorted = [...siblings].sort(sortByAge);
-  return root.sexo === 'M' ? [...sorted, root] : [root, ...sorted];
+// Split siblings: older (< root year) go left, younger (>= root year) go right
+function splitSiblings(root: AncestorNode, siblings: SiblingNode[]): { left: SiblingNode[]; right: SiblingNode[] } {
+  const ry = root.nac_anio;
+  const left: SiblingNode[] = [];
+  const right: SiblingNode[] = [];
+  for (const s of siblings) {
+    if (ry != null && s.nac_anio != null && s.nac_anio < ry) left.push(s);
+    else right.push(s);
+  }
+  left.sort(sortByAge);
+  right.sort(sortByAge);
+  return { left, right };
 }
 
 function fmtDate(dia: number | null, mes: number | null, anio: number | null, tipo: string): string {
@@ -88,21 +96,37 @@ function PersonCard({ node, onClick, isRoot }: { node: PersonBase; onClick: () =
   );
 }
 
+function SibRow({ left, right, leftSpacers, rightSpacers, root, navigate, column }: {
+  left: SiblingNode[]; right: SiblingNode[];
+  leftSpacers: number; rightSpacers: number;
+  root: AncestorNode; navigate: (id: number) => void; column?: boolean;
+}) {
+  const sp: React.CSSProperties = { width: 115, height: 148, flexShrink: 0, visibility: 'hidden' };
+  return (
+    <div style={{ display: 'flex', flexDirection: column ? 'column' : 'row', gap: 8 }}>
+      {Array.from({ length: leftSpacers }).map((_, i) => <div key={`sl${i}`} style={sp} />)}
+      {left.map(p => <PersonCard key={p.id} node={p} onClick={() => navigate(p.id)} />)}
+      <PersonCard node={root} onClick={() => navigate(root.id)} isRoot />
+      {right.map(p => <PersonCard key={p.id} node={p} onClick={() => navigate(p.id)} />)}
+      {Array.from({ length: rightSpacers }).map((_, i) => <div key={`sr${i}`} style={sp} />)}
+    </div>
+  );
+}
+
 function HBranch({ node, gen, navigate, siblings }: { node: AncestorNode; gen: number; navigate: (id: number) => void; siblings?: SiblingNode[] }) {
   const padre = gen < MAX_GENS ? node.padre : undefined;
   const madre = gen < MAX_GENS ? node.madre : undefined;
   const hasParents = !!(padre || madre);
   const sibList = siblings ?? [];
-  const allInCol = sibList.length > 0 ? buildChildrenList(node, sibList) : null;
+  const hasSiblings = sibList.length > 0;
+  const { left, right } = hasSiblings ? splitSiblings(node, sibList) : { left: [], right: [] };
+  const leftSpacers = Math.max(0, right.length - left.length);
+  const rightSpacers = Math.max(0, left.length - right.length);
 
   return (
     <div style={{ display: 'flex', alignItems: 'center' }}>
-      {allInCol ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {allInCol.map(p => (
-            <PersonCard key={p.id} node={p} onClick={() => navigate(p.id)} isRoot={p.id === node.id} />
-          ))}
-        </div>
+      {hasSiblings ? (
+        <SibRow left={left} right={right} leftSpacers={leftSpacers} rightSpacers={rightSpacers} root={node} navigate={navigate} column />
       ) : (
         <PersonCard node={node} onClick={() => navigate(node.id)} />
       )}
@@ -147,7 +171,10 @@ function VBranch({ node, gen, navigate, siblings }: { node: AncestorNode; gen: n
   const madre = gen < MAX_GENS ? node.madre : undefined;
   const hasParents = !!(padre || madre);
   const sibList = siblings ?? [];
-  const allInRow = sibList.length > 0 ? buildChildrenList(node, sibList) : null;
+  const hasSiblings = sibList.length > 0;
+  const { left, right } = hasSiblings ? splitSiblings(node, sibList) : { left: [], right: [] };
+  const leftSpacers = Math.max(0, right.length - left.length);
+  const rightSpacers = Math.max(0, left.length - right.length);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -170,12 +197,8 @@ function VBranch({ node, gen, navigate, siblings }: { node: AncestorNode; gen: n
           <div style={{ width: 2, height: 16, background: '#d8d8d8', flexShrink: 0 }} />
         </>
       )}
-      {allInRow ? (
-        <div style={{ display: 'flex', gap: 8 }}>
-          {allInRow.map(p => (
-            <PersonCard key={p.id} node={p} onClick={() => navigate(p.id)} isRoot={p.id === node.id} />
-          ))}
-        </div>
+      {hasSiblings ? (
+        <SibRow left={left} right={right} leftSpacers={leftSpacers} rightSpacers={rightSpacers} root={node} navigate={navigate} />
       ) : (
         <PersonCard node={node} onClick={() => navigate(node.id)} />
       )}
