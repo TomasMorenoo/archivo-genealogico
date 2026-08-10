@@ -91,37 +91,102 @@ function PersonCard({ node, onClick, isRoot }: { node: PersonBase; onClick: () =
   );
 }
 
-function SibRow({ left, right, leftSpacers, rightSpacers, root, navigate, column }: {
+type SlotProps = {
+  navigate: (id: number) => void;
+  expandedIds: Set<number>;
+  lazyData: Map<number, { pareja?: SiblingNode; hijos: SiblingNode[] }>;
+  loadingIds: Set<number>;
+  onToggle: (id: number, hasPreloaded: boolean) => void;
+};
+
+function PersonSlot({ node, isRoot, navigate, expandedIds, lazyData, loadingIds, onToggle }: {
+  node: SiblingNode; isRoot?: boolean;
+} & SlotProps) {
+  const lazy = lazyData.get(node.id);
+  const pareja = lazy?.pareja ?? node.pareja;
+  const hijos = lazy?.hijos ?? node.hijos ?? [];
+  const hasChildren = hijos.length > 0 || (node.hasHijos ?? false);
+  const expanded = expandedIds.has(node.id);
+  const loading = loadingIds.has(node.id);
+  const hasPreloaded = (node.hijos !== undefined && node.hijos.length > 0) || hijos.length > 0;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <PersonCard node={node as PersonBase} onClick={() => navigate(node.id)} isRoot={isRoot} />
+        {pareja && (
+          <>
+            <div style={{ width: 10, height: 2, background: '#d8d8d8' }} />
+            <PersonCard node={pareja as PersonBase} onClick={() => navigate(pareja.id)} />
+          </>
+        )}
+      </div>
+      {hasChildren && (
+        <button
+          onClick={() => onToggle(node.id, hasPreloaded)}
+          disabled={loading}
+          style={{ background: 'none', border: '1px solid #ddd', borderRadius: 10, cursor: 'pointer', fontSize: '0.62rem', color: '#999', padding: '1px 8px', marginTop: 5, lineHeight: 1.5 }}
+        >
+          {loading ? '…' : expanded ? '▲' : '▼'}
+        </button>
+      )}
+      {expanded && hijos.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{ width: 2, height: 8, background: '#d8d8d8' }} />
+          <div style={{ display: 'flex', gap: 8, borderTop: '2px solid #d8d8d8', alignItems: 'flex-start' }}>
+            {hijos.map(child => (
+              <div key={child.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ width: 2, height: 8, background: '#d8d8d8' }} />
+                <PersonSlot
+                  node={child} navigate={navigate}
+                  expandedIds={expandedIds} lazyData={lazyData}
+                  loadingIds={loadingIds} onToggle={onToggle}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SibRow({ left, right, leftSpacers, rightSpacers, root, column,
+  navigate, expandedIds, lazyData, loadingIds, onToggle }: {
   left: SiblingNode[]; right: SiblingNode[];
   leftSpacers: number; rightSpacers: number;
-  root: AncestorNode; navigate: (id: number) => void; column?: boolean;
-}) {
+  root: AncestorNode; column?: boolean;
+} & SlotProps) {
   const sp: React.CSSProperties = { width: 115, height: 148, flexShrink: 0, visibility: 'hidden' };
+  const slotProps: SlotProps = { navigate, expandedIds, lazyData, loadingIds, onToggle };
   return (
-    <div style={{ display: 'flex', flexDirection: column ? 'column' : 'row', gap: 8 }}>
+    <div style={{ display: 'flex', flexDirection: column ? 'column' : 'row', gap: 8, alignItems: 'flex-start' }}>
       {Array.from({ length: leftSpacers }).map((_, i) => <div key={`sl${i}`} style={sp} />)}
-      {left.map(p => <PersonCard key={p.id} node={p} onClick={() => navigate(p.id)} />)}
-      <PersonCard node={root} onClick={() => navigate(root.id)} isRoot />
-      {right.map(p => <PersonCard key={p.id} node={p} onClick={() => navigate(p.id)} />)}
+      {left.map(p => <PersonSlot key={p.id} node={p} {...slotProps} />)}
+      <PersonSlot node={root as unknown as SiblingNode} isRoot {...slotProps} />
+      {right.map(p => <PersonSlot key={p.id} node={p} {...slotProps} />)}
       {Array.from({ length: rightSpacers }).map((_, i) => <div key={`sr${i}`} style={sp} />)}
     </div>
   );
 }
 
-function HBranch({ node, gen, navigate, siblings }: { node: AncestorNode; gen: number; navigate: (id: number) => void; siblings?: SiblingNode[] }) {
+function HBranch({ node, gen, siblings, navigate, expandedIds, lazyData, loadingIds, onToggle }: {
+  node: AncestorNode; gen: number; siblings?: SiblingNode[];
+} & SlotProps) {
   const padre = gen < MAX_GENS ? node.padre : undefined;
   const madre = gen < MAX_GENS ? node.madre : undefined;
   const hasParents = !!(padre || madre);
   const sibList = siblings ?? [];
   const hasSiblings = sibList.length > 0;
   const { left, right, leftSpacers, rightSpacers } = hasSiblings ? buildSibLayout(node, sibList) : { left: [], right: [], leftSpacers: 0, rightSpacers: 0 };
+  const slotProps: SlotProps = { navigate, expandedIds, lazyData, loadingIds, onToggle };
 
   return (
     <div style={{ display: 'flex', alignItems: 'center' }}>
       {hasSiblings ? (
-        <SibRow left={left} right={right} leftSpacers={leftSpacers} rightSpacers={rightSpacers} root={node} navigate={navigate} column />
+        <SibRow left={left} right={right} leftSpacers={leftSpacers} rightSpacers={rightSpacers} root={node} column {...slotProps} />
       ) : (
-        <PersonCard node={node} onClick={() => navigate(node.id)} />
+        <PersonSlot node={node as unknown as SiblingNode} {...slotProps} />
       )}
       {hasParents && (
         <>
@@ -141,13 +206,13 @@ function HBranch({ node, gen, navigate, siblings }: { node: AncestorNode; gen: n
               {padre && (
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   <div style={{ width: 8, height: 2, background: '#d8d8d8', flexShrink: 0 }} />
-                  <HBranch node={padre} gen={gen + 1} navigate={navigate} />
+                  <HBranch node={padre} gen={gen + 1} siblings={undefined} {...slotProps} />
                 </div>
               )}
               {madre && (
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   <div style={{ width: 8, height: 2, background: '#d8d8d8', flexShrink: 0 }} />
-                  <HBranch node={madre} gen={gen + 1} navigate={navigate} />
+                  <HBranch node={madre} gen={gen + 1} siblings={undefined} {...slotProps} />
                 </div>
               )}
             </div>
@@ -158,14 +223,16 @@ function HBranch({ node, gen, navigate, siblings }: { node: AncestorNode; gen: n
   );
 }
 
-// Bottom-to-top: current person at bottom, ancestors above
-function VBranch({ node, gen, navigate, siblings }: { node: AncestorNode; gen: number; navigate: (id: number) => void; siblings?: SiblingNode[] }) {
+function VBranch({ node, gen, siblings, navigate, expandedIds, lazyData, loadingIds, onToggle }: {
+  node: AncestorNode; gen: number; siblings?: SiblingNode[];
+} & SlotProps) {
   const padre = gen < MAX_GENS ? node.padre : undefined;
   const madre = gen < MAX_GENS ? node.madre : undefined;
   const hasParents = !!(padre || madre);
   const sibList = siblings ?? [];
   const hasSiblings = sibList.length > 0;
   const { left, right, leftSpacers, rightSpacers } = hasSiblings ? buildSibLayout(node, sibList) : { left: [], right: [], leftSpacers: 0, rightSpacers: 0 };
+  const slotProps: SlotProps = { navigate, expandedIds, lazyData, loadingIds, onToggle };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -174,13 +241,13 @@ function VBranch({ node, gen, navigate, siblings }: { node: AncestorNode; gen: n
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', borderBottom: '2px solid #d8d8d8' }}>
             {padre && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <VBranch node={padre} gen={gen + 1} navigate={navigate} />
+                <VBranch node={padre} gen={gen + 1} siblings={undefined} {...slotProps} />
                 <div style={{ width: 2, height: 10, background: '#d8d8d8' }} />
               </div>
             )}
             {madre && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <VBranch node={madre} gen={gen + 1} navigate={navigate} />
+                <VBranch node={madre} gen={gen + 1} siblings={undefined} {...slotProps} />
                 <div style={{ width: 2, height: 10, background: '#d8d8d8' }} />
               </div>
             )}
@@ -189,9 +256,9 @@ function VBranch({ node, gen, navigate, siblings }: { node: AncestorNode; gen: n
         </>
       )}
       {hasSiblings ? (
-        <SibRow left={left} right={right} leftSpacers={leftSpacers} rightSpacers={rightSpacers} root={node} navigate={navigate} />
+        <SibRow left={left} right={right} leftSpacers={leftSpacers} rightSpacers={rightSpacers} root={node} {...slotProps} />
       ) : (
-        <PersonCard node={node} onClick={() => navigate(node.id)} />
+        <PersonSlot node={node as unknown as SiblingNode} {...slotProps} />
       )}
     </div>
   );
@@ -265,7 +332,9 @@ function PdfExportModal({ root, orientation, onClose }: {
     }
   }
 
-  const noop = () => {};
+  const noopToggle = () => {};
+  const emptySet = new Set<number>();
+  const emptyMap = new Map<number, { pareja?: SiblingNode; hijos: SiblingNode[] }>();
 
   return (
     <div style={pdfOverlay}>
@@ -353,8 +422,10 @@ function PdfExportModal({ root, orientation, onClose }: {
                 }}>
                   <div ref={treeRef}>
                     {orientation === 'horizontal'
-                      ? <HBranch node={root} gen={1} navigate={noop} siblings={root.hermanos} />
-                      : <VBranch node={root} gen={1} navigate={noop} siblings={root.hermanos} />
+                      ? <HBranch node={root} gen={1} navigate={() => {}} siblings={root.hermanos}
+                          expandedIds={emptySet} lazyData={emptyMap} loadingIds={emptySet} onToggle={noopToggle} />
+                      : <VBranch node={root} gen={1} navigate={() => {}} siblings={root.hermanos}
+                          expandedIds={emptySet} lazyData={emptyMap} loadingIds={emptySet} onToggle={noopToggle} />
                     }
                   </div>
                 </div>
@@ -379,8 +450,31 @@ export default function ArbolPage() {
   const [view, setView] = useState<View>('bio');
   const [showPdf, setShowPdf] = useState(false);
 
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+  const [lazyData, setLazyData] = useState<Map<number, { pareja?: SiblingNode; hijos: SiblingNode[] }>>(new Map());
+  const [loadingIds, setLoadingIds] = useState<Set<number>>(new Set());
+
+  async function handleToggle(id: number, hasPreloaded: boolean) {
+    if (expandedIds.has(id)) {
+      setExpandedIds(prev => { const n = new Set(prev); n.delete(id); return n; });
+      return;
+    }
+    if (!hasPreloaded && !lazyData.has(id)) {
+      setLoadingIds(prev => new Set([...prev, id]));
+      try {
+        const data = await personasApi.descendientes(id);
+        setLazyData(prev => new Map([...prev, [id, data]]));
+      } finally {
+        setLoadingIds(prev => { const n = new Set(prev); n.delete(id); return n; });
+      }
+    }
+    setExpandedIds(prev => new Set([...prev, id]));
+  }
+
   async function loadTree(id: number, v: View) {
     setLoading(true);
+    setExpandedIds(new Set());
+    setLazyData(new Map());
     try {
       const tree = await personasApi.ancestros(id, MAX_GENS, v);
       setRoot(tree);
@@ -440,6 +534,14 @@ export default function ArbolPage() {
     navigate(`/persona/${id}`);
   }
 
+  const branchProps: SlotProps = {
+    navigate: goTo,
+    expandedIds,
+    lazyData,
+    loadingIds,
+    onToggle: handleToggle,
+  };
+
   return (
     <div style={{ padding: '24px 20px', minHeight: '100vh', background: '#fafafa' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
@@ -482,8 +584,8 @@ export default function ArbolPage() {
           <div style={{ overflowX: 'auto', overflowY: 'auto', paddingBottom: 24 }}>
             <div id="arbol-tree-content" style={{ display: 'inline-block', padding: '16px 8px' }}>
               {orientation === 'horizontal'
-                ? <HBranch node={root} gen={1} navigate={goTo} siblings={root.hermanos} />
-                : <VBranch node={root} gen={1} navigate={goTo} siblings={root.hermanos} />
+                ? <HBranch node={root} gen={1} siblings={root.hermanos} {...branchProps} />
+                : <VBranch node={root} gen={1} siblings={root.hermanos} {...branchProps} />
               }
             </div>
           </div>

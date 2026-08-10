@@ -92,7 +92,9 @@ export interface SiblingNode {
   def_mes: number | null;
   def_anio: number | null;
   def_tipo: string;
+  pareja?: SiblingNode;
   hijos?: SiblingNode[];
+  hasHijos?: boolean;
 }
 
 export interface AncestorNode {
@@ -112,6 +114,9 @@ export interface AncestorNode {
   padre?: AncestorNode;
   madre?: AncestorNode;
   hermanos?: SiblingNode[];
+  pareja?: SiblingNode;
+  hijos?: SiblingNode[];
+  hasHijos?: boolean;
 }
 
 export interface Documento {

@@ -16,6 +16,8 @@ export const personasApi = {
     api.delete(`/personas/${id}`),
   ancestros: (id: number, generaciones = 5, view: 'bio' | 'adoptivo' = 'bio') =>
     api.get<AncestorNode>(`/personas/${id}/ancestros`, { params: { generaciones, view } }).then(r => r.data),
+  descendientes: (id: number) =>
+    api.get<{ pareja?: import('../types').SiblingNode; hijos: import('../types').SiblingNode[] }>(`/personas/${id}/descendientes`).then(r => r.data),
 };
 
 export const relacionesApi = {

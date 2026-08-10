@@ -16,7 +16,9 @@ export interface SiblingNode {
   def_mes: number | null;
   def_anio: number | null;
   def_tipo: string;
+  pareja?: SiblingNode;
   hijos?: SiblingNode[];
+  hasHijos?: boolean;
 }
 
 export interface AncestorNode {
@@ -36,6 +38,50 @@ export interface AncestorNode {
   padre?: AncestorNode;
   madre?: AncestorNode;
   hermanos?: SiblingNode[];
+  pareja?: SiblingNode;
+  hijos?: SiblingNode[];
+  hasHijos?: boolean;
+}
+
+function getPareja(id: number): SiblingNode | undefined {
+  const db = getDb();
+  const row = db.prepare(`
+    SELECT p.id, p.nombre, p.apellido, p.sexo, p.fallecida,
+      p.nac_dia, p.nac_mes, p.nac_anio, p.nac_tipo,
+      p.def_dia, p.def_mes, p.def_anio, p.def_tipo
+    FROM personas p
+    JOIN relaciones r ON r.persona_destino_id = p.id
+    WHERE r.persona_origen_id = ? AND r.tipo_relacion_id = 5
+    LIMIT 1
+  `).get(id) as any;
+  if (!row) return undefined;
+  return { ...row, fallecida: !!row.fallecida };
+}
+
+function getHijosConPareja(id: number): SiblingNode[] {
+  const db = getDb();
+  const rows = db.prepare(`
+    SELECT p.id, p.nombre, p.apellido, p.sexo, p.fallecida,
+      p.nac_dia, p.nac_mes, p.nac_anio, p.nac_tipo,
+      p.def_dia, p.def_mes, p.def_anio, p.def_tipo
+    FROM personas p
+    JOIN relaciones r ON r.persona_destino_id = p.id
+    WHERE r.persona_origen_id = ? AND r.tipo_relacion_id IN (3, 4)
+    ORDER BY p.nac_anio ASC NULLS LAST, p.nac_mes ASC NULLS LAST, p.nac_dia ASC NULLS LAST
+  `).all(id) as any[];
+  return rows.map(row => {
+    const node: SiblingNode = { ...row, fallecida: !!row.fallecida };
+    node.pareja = getPareja(row.id);
+    const cnt = (db.prepare(
+      'SELECT COUNT(*) as cnt FROM relaciones WHERE persona_origen_id = ? AND tipo_relacion_id IN (3,4)'
+    ).get(row.id) as { cnt: number }).cnt;
+    node.hasHijos = cnt > 0;
+    return node;
+  });
+}
+
+export function getDescendientes(id: number): { pareja?: SiblingNode; hijos: SiblingNode[] } {
+  return { pareja: getPareja(id), hijos: getHijosConPareja(id) };
 }
 
 function getSiblings(id: number, padreTipos: number[], madreTipos: number[]): SiblingNode[] {
@@ -58,7 +104,12 @@ function getSiblings(id: number, padreTipos: number[], madreTipos: number[]): Si
       )
     ORDER BY p.nac_anio ASC NULLS LAST, p.nac_mes ASC NULLS LAST, p.nac_dia ASC NULLS LAST
   `).all(id, id, id) as any[];
-  return rows.map(r => ({ ...r, fallecida: !!r.fallecida }));
+  return rows.map(r => {
+    const node: SiblingNode = { ...r, fallecida: !!r.fallecida };
+    node.pareja = getPareja(r.id);
+    node.hijos = getHijosConPareja(r.id);
+    return node;
+  });
 }
 
 export function getAncestros(id: number, generaciones: number, view: 'bio' | 'adoptivo' = 'bio', fetchSiblings = false): AncestorNode | null {
@@ -87,6 +138,8 @@ export function getAncestros(id: number, generaciones: number, view: 'bio' | 'ad
   if (fetchSiblings) {
     node.hermanos = getSiblings(id, padreTipos, madreTipos);
   }
+  node.pareja = getPareja(id);
+  node.hijos = getHijosConPareja(id);
   return node;
 }
 
