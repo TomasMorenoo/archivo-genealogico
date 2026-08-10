@@ -33,6 +33,12 @@ function sortByAge(a: PersonBase, b: PersonBase): number {
   return a.nac_anio - b.nac_anio;
 }
 
+// Root at tip: male → root at right end; female → root at left end
+function buildChildrenList(root: AncestorNode, siblings: SiblingNode[]): PersonBase[] {
+  const sorted = [...siblings].sort(sortByAge);
+  return root.sexo === 'M' ? [...sorted, root] : [root, ...sorted];
+}
+
 function fmtDate(dia: number | null, mes: number | null, anio: number | null, tipo: string): string {
   if (tipo === 'desconocida') return '';
   if (tipo === 'aproximada' && anio) return `≈${anio}`;
@@ -62,8 +68,8 @@ function PersonAvatar({ sexo }: { sexo: string }) {
   const bg = isMale ? '#dbeafe' : isFemale ? '#fce7f3' : '#f3f4f6';
   const fill = isMale ? '#2563eb' : isFemale ? '#be185d' : '#9ca3af';
   return (
-    <div style={{ width: 40, height: 40, borderRadius: '50%', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-      <svg width="22" height="22" viewBox="0 0 24 24" fill={fill}>
+    <div style={{ width: 48, height: 48, borderRadius: '50%', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <svg width="26" height="26" viewBox="0 0 24 24" fill={fill}>
         <circle cx="12" cy="7" r="4" />
         <path d="M4 21c0-4.4 3.58-8 8-8s8 3.6 8 8" />
       </svg>
@@ -75,11 +81,9 @@ function PersonCard({ node, onClick, isRoot }: { node: PersonBase; onClick: () =
   return (
     <div onClick={onClick} style={{ ...cardStyle, ...(isRoot ? cardRootHighlight : {}) }}>
       <PersonAvatar sexo={node.sexo} />
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 1 }}>
-        <div style={cardNombre}>{node.nombre}</div>
-        <div style={cardApellido}>{node.apellido}</div>
-        <div style={cardLife}>{fmtYears(node)}</div>
-      </div>
+      <div style={cardNombre}>{node.nombre}</div>
+      <div style={cardApellido}>{node.apellido}</div>
+      <div style={cardLife}>{fmtYears(node)}</div>
     </div>
   );
 }
@@ -89,7 +93,7 @@ function HBranch({ node, gen, navigate, siblings }: { node: AncestorNode; gen: n
   const madre = gen < MAX_GENS ? node.madre : undefined;
   const hasParents = !!(padre || madre);
   const sibList = siblings ?? [];
-  const allInCol = sibList.length > 0 ? [...sibList, node].sort(sortByAge) : null;
+  const allInCol = sibList.length > 0 ? buildChildrenList(node, sibList) : null;
 
   return (
     <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -143,7 +147,7 @@ function VBranch({ node, gen, navigate, siblings }: { node: AncestorNode; gen: n
   const madre = gen < MAX_GENS ? node.madre : undefined;
   const hasParents = !!(padre || madre);
   const sibList = siblings ?? [];
-  const allInRow = sibList.length > 0 ? [...sibList, node].sort(sortByAge) : null;
+  const allInRow = sibList.length > 0 ? buildChildrenList(node, sibList) : null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -483,15 +487,18 @@ export default function ArbolPage() {
 
 const cardRootHighlight: React.CSSProperties = { border: '2px solid #1a1a1a', boxShadow: '0 2px 8px rgba(0,0,0,0.13)' };
 const cardStyle: React.CSSProperties = {
-  width: 190, height: 76, flexShrink: 0,
-  border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff',
+  width: 115, height: 148, flexShrink: 0,
+  border: '1px solid #e2e8f0', borderRadius: 10, background: '#fff',
   cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
-  display: 'flex', flexDirection: 'row', alignItems: 'center',
-  padding: '0 10px', boxSizing: 'border-box', gap: 10,
+  display: 'flex', flexDirection: 'column', alignItems: 'center',
+  padding: '14px 8px 10px', boxSizing: 'border-box', gap: 4,
 };
-const cardNombre: React.CSSProperties = { fontWeight: 700, fontSize: '0.82rem', color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
-const cardApellido: React.CSSProperties = { fontWeight: 400, fontSize: '0.8rem', color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
-const cardLife: React.CSSProperties = { fontSize: '0.7rem', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 };
+const cardNombre: React.CSSProperties = {
+  fontWeight: 700, fontSize: '0.78rem', color: '#1a1a1a', textAlign: 'center', width: '100%',
+  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: '1.25',
+};
+const cardApellido: React.CSSProperties = { fontWeight: 400, fontSize: '0.75rem', color: '#555', textAlign: 'center', width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
+const cardLife: React.CSSProperties = { fontSize: '0.68rem', color: '#94a3b8', textAlign: 'center', width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 };
 const searchCard: React.CSSProperties = { background: '#fff', border: '1px solid #e4e4e4', borderRadius: 8, padding: 20, maxWidth: 420 };
 const backBtn: React.CSSProperties = { background: 'none', border: '1px solid #ddd', borderRadius: 4, padding: '5px 12px', cursor: 'pointer', fontSize: '0.85rem', color: '#555' };
 const changeBtn: React.CSSProperties = { background: 'none', border: '1px solid #ccc', borderRadius: 4, padding: '3px 10px', cursor: 'pointer', fontSize: '0.8rem', color: '#666' };
