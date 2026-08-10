@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { personasApi, configApi } from '../api/client';
-import type { AncestorNode } from '../types';
+import type { AncestorNode, SiblingNode } from '../types';
 import PersonaSearchInput from '../components/PersonaSearchInput/PersonaSearchInput';
 import type { PersonaListItem } from '../types';
 
@@ -24,6 +24,15 @@ const PAPER_SIZES = [
 
 const MARGIN_OPTIONS = [5, 10, 15, 20, 25] as const;
 
+type PersonBase = Pick<AncestorNode, 'id' | 'nombre' | 'apellido' | 'fallecida' | 'nac_dia' | 'nac_mes' | 'nac_anio' | 'nac_tipo' | 'def_dia' | 'def_mes' | 'def_anio' | 'def_tipo'>;
+
+function sortByAge(a: PersonBase, b: PersonBase): number {
+  if (a.nac_anio == null && b.nac_anio == null) return 0;
+  if (a.nac_anio == null) return 1;
+  if (b.nac_anio == null) return -1;
+  return a.nac_anio - b.nac_anio;
+}
+
 function fmtDate(dia: number | null, mes: number | null, anio: number | null, tipo: string): string {
   if (tipo === 'desconocida') return '';
   if (tipo === 'aproximada' && anio) return `≈${anio}`;
@@ -32,7 +41,7 @@ function fmtDate(dia: number | null, mes: number | null, anio: number | null, ti
   return '';
 }
 
-function fmtLife(node: AncestorNode): string {
+function fmtLife(node: PersonBase): string {
   const birth = fmtDate(node.nac_dia, node.nac_mes, node.nac_anio, node.nac_tipo);
   let status: string;
   if (node.fallecida) {
@@ -44,9 +53,9 @@ function fmtLife(node: AncestorNode): string {
   return birth ? `${birth} – ${status}` : status;
 }
 
-function PersonCard({ node, onClick }: { node: AncestorNode; onClick: () => void }) {
+function PersonCard({ node, onClick, isRoot }: { node: PersonBase; onClick: () => void; isRoot?: boolean }) {
   return (
-    <div onClick={onClick} style={cardStyle}>
+    <div onClick={onClick} style={{ ...cardStyle, ...(isRoot ? cardRootHighlight : {}) }}>
       <div style={cardNombre}>{node.nombre}</div>
       <div style={cardApellido}>{node.apellido}</div>
       <div style={cardLife}>{fmtLife(node)}</div>
@@ -54,14 +63,24 @@ function PersonCard({ node, onClick }: { node: AncestorNode; onClick: () => void
   );
 }
 
-function HBranch({ node, gen, navigate }: { node: AncestorNode; gen: number; navigate: (id: number) => void }) {
+function HBranch({ node, gen, navigate, siblings }: { node: AncestorNode; gen: number; navigate: (id: number) => void; siblings?: SiblingNode[] }) {
   const padre = gen < MAX_GENS ? node.padre : undefined;
   const madre = gen < MAX_GENS ? node.madre : undefined;
   const hasParents = !!(padre || madre);
+  const sibList = siblings ?? [];
+  const allInCol = sibList.length > 0 ? [...sibList, node].sort(sortByAge) : null;
 
   return (
     <div style={{ display: 'flex', alignItems: 'center' }}>
-      <PersonCard node={node} onClick={() => navigate(node.id)} />
+      {allInCol ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {allInCol.map(p => (
+            <PersonCard key={p.id} node={p} onClick={() => navigate(p.id)} isRoot={p.id === node.id} />
+          ))}
+        </div>
+      ) : (
+        <PersonCard node={node} onClick={() => navigate(node.id)} />
+      )}
       {hasParents && (
         <>
           <div style={{ width: 20, height: 2, background: '#d8d8d8', flexShrink: 0 }} />
@@ -98,10 +117,12 @@ function HBranch({ node, gen, navigate }: { node: AncestorNode; gen: number; nav
 }
 
 // Bottom-to-top: current person at bottom, ancestors above
-function VBranch({ node, gen, navigate }: { node: AncestorNode; gen: number; navigate: (id: number) => void }) {
+function VBranch({ node, gen, navigate, siblings }: { node: AncestorNode; gen: number; navigate: (id: number) => void; siblings?: SiblingNode[] }) {
   const padre = gen < MAX_GENS ? node.padre : undefined;
   const madre = gen < MAX_GENS ? node.madre : undefined;
   const hasParents = !!(padre || madre);
+  const sibList = siblings ?? [];
+  const allInRow = sibList.length > 0 ? [...sibList, node].sort(sortByAge) : null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -124,7 +145,15 @@ function VBranch({ node, gen, navigate }: { node: AncestorNode; gen: number; nav
           <div style={{ width: 2, height: 16, background: '#d8d8d8', flexShrink: 0 }} />
         </>
       )}
-      <PersonCard node={node} onClick={() => navigate(node.id)} />
+      {allInRow ? (
+        <div style={{ display: 'flex', gap: 8 }}>
+          {allInRow.map(p => (
+            <PersonCard key={p.id} node={p} onClick={() => navigate(p.id)} isRoot={p.id === node.id} />
+          ))}
+        </div>
+      ) : (
+        <PersonCard node={node} onClick={() => navigate(node.id)} />
+      )}
     </div>
   );
 }
@@ -285,8 +314,8 @@ function PdfExportModal({ root, orientation, onClose }: {
                 }}>
                   <div ref={treeRef}>
                     {orientation === 'horizontal'
-                      ? <HBranch node={root} gen={1} navigate={noop} />
-                      : <VBranch node={root} gen={1} navigate={noop} />
+                      ? <HBranch node={root} gen={1} navigate={noop} siblings={root.hermanos} />
+                      : <VBranch node={root} gen={1} navigate={noop} siblings={root.hermanos} />
                     }
                   </div>
                 </div>
@@ -414,8 +443,8 @@ export default function ArbolPage() {
           <div style={{ overflowX: 'auto', overflowY: 'auto', paddingBottom: 24 }}>
             <div id="arbol-tree-content" style={{ display: 'inline-block', padding: '16px 8px' }}>
               {orientation === 'horizontal'
-                ? <HBranch node={root} gen={1} navigate={goTo} />
-                : <VBranch node={root} gen={1} navigate={goTo} />
+                ? <HBranch node={root} gen={1} navigate={goTo} siblings={root.hermanos} />
+                : <VBranch node={root} gen={1} navigate={goTo} siblings={root.hermanos} />
               }
             </div>
           </div>
@@ -431,6 +460,7 @@ export default function ArbolPage() {
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
+const cardRootHighlight: React.CSSProperties = { border: '2px solid #1a1a1a' };
 const cardStyle: React.CSSProperties = {
   width: 148, height: 76, flexShrink: 0,
   border: '1px solid #e4e4e4', borderRadius: 6, background: '#fff',

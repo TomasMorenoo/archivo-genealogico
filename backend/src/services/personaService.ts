@@ -2,6 +2,23 @@ import { getDb } from '../db/database';
 import type { Persona, PersonaListItem } from '../types';
 import { deletePersonaFolder, renumberPersonaFolders } from './fileSystemService';
 
+export interface SiblingNode {
+  id: number;
+  nombre: string;
+  apellido: string;
+  sexo: string;
+  fallecida: boolean;
+  nac_dia: number | null;
+  nac_mes: number | null;
+  nac_anio: number | null;
+  nac_tipo: string;
+  def_dia: number | null;
+  def_mes: number | null;
+  def_anio: number | null;
+  def_tipo: string;
+  hijos?: SiblingNode[];
+}
+
 export interface AncestorNode {
   id: number;
   nombre: string;
@@ -18,18 +35,42 @@ export interface AncestorNode {
   def_tipo: string;
   padre?: AncestorNode;
   madre?: AncestorNode;
+  hermanos?: SiblingNode[];
 }
 
-export function getAncestros(id: number, generaciones: number, view: 'bio' | 'adoptivo' = 'bio'): AncestorNode | null {
+function getSiblings(id: number, padreTipos: number[], madreTipos: number[]): SiblingNode[] {
+  const db = getDb();
+  const rows = db.prepare(`
+    SELECT DISTINCT p.id, p.nombre, p.apellido, p.sexo, p.fallecida,
+      p.nac_dia, p.nac_mes, p.nac_anio, p.nac_tipo,
+      p.def_dia, p.def_mes, p.def_anio, p.def_tipo
+    FROM personas p
+    JOIN relaciones r ON r.persona_origen_id = p.id
+    WHERE p.id != ?
+      AND (
+        (r.tipo_relacion_id IN (${padreTipos.join(',')}) AND r.persona_destino_id IN (
+          SELECT persona_destino_id FROM relaciones WHERE persona_origen_id = ? AND tipo_relacion_id IN (${padreTipos.join(',')})
+        ))
+        OR
+        (r.tipo_relacion_id IN (${madreTipos.join(',')}) AND r.persona_destino_id IN (
+          SELECT persona_destino_id FROM relaciones WHERE persona_origen_id = ? AND tipo_relacion_id IN (${madreTipos.join(',')})
+        ))
+      )
+    ORDER BY p.nac_anio ASC NULLS LAST, p.nac_mes ASC NULLS LAST, p.nac_dia ASC NULLS LAST
+  `).all(id, id, id) as any[];
+  return rows.map(r => ({ ...r, fallecida: !!r.fallecida }));
+}
+
+export function getAncestros(id: number, generaciones: number, view: 'bio' | 'adoptivo' = 'bio', fetchSiblings = false): AncestorNode | null {
   const db = getDb();
   const row = db.prepare(
     'SELECT id, nombre, apellido, sexo, fallecida, nac_dia, nac_mes, nac_anio, nac_tipo, def_dia, def_mes, def_anio, def_tipo FROM personas WHERE id = ?'
   ).get(id) as any;
   if (!row) return null;
   const node: AncestorNode = { ...row, fallecida: !!row.fallecida };
+  const padreTipos = view === 'adoptivo' ? [8, 1] : [6, 1];
+  const madreTipos = view === 'adoptivo' ? [9, 2] : [7, 2];
   if (generaciones > 1) {
-    const padreTipos = view === 'adoptivo' ? [8, 1] : [6, 1];
-    const madreTipos = view === 'adoptivo' ? [9, 2] : [7, 2];
     const padreRow = db.prepare(`
       SELECT persona_destino_id as id FROM relaciones
       WHERE persona_origen_id = ? AND tipo_relacion_id IN (${padreTipos.join(',')})
@@ -42,6 +83,9 @@ export function getAncestros(id: number, generaciones: number, view: 'bio' | 'ad
     `).get(id) as { id: number } | null;
     if (padreRow) node.padre = getAncestros(padreRow.id, generaciones - 1, view) ?? undefined;
     if (madreRow) node.madre = getAncestros(madreRow.id, generaciones - 1, view) ?? undefined;
+  }
+  if (fetchSiblings) {
+    node.hermanos = getSiblings(id, padreTipos, madreTipos);
   }
   return node;
 }

@@ -31,7 +31,7 @@ personasRouter.get('/', (req, res) => {
 personasRouter.get('/:id/ancestros', (req, res) => {
   const generaciones = Math.min(Number(req.query.generaciones) || 5, 8);
   const view = req.query.view === 'adoptivo' ? 'adoptivo' : 'bio';
-  const tree = getAncestros(Number(req.params.id), generaciones, view);
+  const tree = getAncestros(Number(req.params.id), generaciones, view, true);
   if (!tree) return res.status(404).json({ error: 'No encontrada' });
   res.json(tree);
 });
