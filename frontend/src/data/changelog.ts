@@ -95,6 +95,22 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
+    id: 5,
+    label: 'Beta – Árbol v1.3',
+    channel: 'beta',
+    sections: [
+      {
+        title: 'Árbol genealógico',
+        items: [
+          'Hermanos colapsables: aparecen con una flecha (▲/◀ según orientación) — por defecto el árbol arranca limpio.',
+          'La flecha va arriba o abajo (modo horizontal) / izquierda o derecha (modo vertical) según el sexo de la persona.',
+          'Al desplegar hijos (▼) en abuelos o bisabuelos, ya no aparece el padre que ya está visible en el árbol.',
+          'Cada tarjeta muestra la pareja y un botón para desplegar los hijos de esa rama.',
+        ],
+      },
+    ],
+  },
+  {
     id: 4,
     label: 'Beta – Árbol v1.2',
     channel: 'beta',

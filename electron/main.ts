@@ -4,7 +4,7 @@ import Store from 'electron-store';
 import path from 'path';
 
 // Increment when new beta changelog entries are added (id of the latest beta entry)
-const CHANGELOG_VERSION = 4;
+const CHANGELOG_VERSION = 5;
 const CHANNEL = 'beta' as const;
 
 // Force separate userData so beta and official never share config or data paths
