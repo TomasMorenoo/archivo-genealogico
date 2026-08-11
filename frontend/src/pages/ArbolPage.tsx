@@ -85,16 +85,17 @@ type SlotProps = {
 
 // PersonSlot: renders one person card + their partner + expandable children
 // excludeChildId: child already shown in the ancestor chain — excluded from the hijos expand
-// hidePareja: suppress pareja display (used for ancestor nodes — their partner is already shown as a separate branch)
-function PersonSlot({ node, isRoot, excludeChildId, hidePareja, navigate, expandedIds, lazyData, loadingIds, onToggle }: {
-  node: SiblingNode; isRoot?: boolean; excludeChildId?: number; hidePareja?: boolean;
+// hidePareja: suppress pareja display (ancestor nodes — partner is shown as a separate branch)
+// hideChildren: suppress ↓ expand button (ancestor nodes — expansion creates wrong generation level)
+function PersonSlot({ node, isRoot, excludeChildId, hidePareja, hideChildren, navigate, expandedIds, lazyData, loadingIds, onToggle }: {
+  node: SiblingNode; isRoot?: boolean; excludeChildId?: number; hidePareja?: boolean; hideChildren?: boolean;
 } & SlotProps) {
   const lazy = lazyData.get(node.id);
   const pareja = hidePareja ? undefined : (lazy?.pareja ?? node.pareja);
   const rawHijos = lazy?.hijos ?? node.hijos ?? [];
   const hijos = excludeChildId != null ? rawHijos.filter(h => h.id !== excludeChildId) : rawHijos;
   const hijosLoaded = lazy != null || node.hijos != null;
-  const hasChildren = hijos.length > 0 || (!hijosLoaded && (node.hasHijos ?? false));
+  const hasChildren = !hideChildren && (hijos.length > 0 || (!hijosLoaded && (node.hasHijos ?? false)));
   const expanded = expandedIds.has(node.id);
   const loading = loadingIds.has(node.id);
   const hasPreloaded = hijosLoaded;
@@ -119,7 +120,7 @@ function PersonSlot({ node, isRoot, excludeChildId, hidePareja, navigate, expand
           {loading ? '…' : expanded ? '▲' : '▼'}
         </button>
       )}
-      {expanded && hijos.length > 0 && (
+      {expanded && !hideChildren && hijos.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div style={{ width: 2, height: 8, background: '#d8d8d8' }} />
           <div style={{ display: 'flex', gap: 8, borderTop: '2px solid #d8d8d8', alignItems: 'flex-start' }}>
@@ -177,6 +178,7 @@ function HBranch({ node, gen, siblings, excludeChildId, sibsVisible, onToggleSib
           isRoot={gen === 1}
           excludeChildId={excludeChildId}
           hidePareja={gen > 1}
+          hideChildren={gen > 1}
           {...slotProps}
         />
 
@@ -290,6 +292,7 @@ function VBranch({ node, gen, siblings, excludeChildId, sibsVisible, onToggleSib
           isRoot={gen === 1}
           excludeChildId={excludeChildId}
           hidePareja={gen > 1}
+          hideChildren={gen > 1}
           {...slotProps}
         />
 
