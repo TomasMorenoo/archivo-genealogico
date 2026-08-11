@@ -85,11 +85,12 @@ type SlotProps = {
 
 // PersonSlot: renders one person card + their partner + expandable children
 // excludeChildId: child already shown in the ancestor chain — excluded from the hijos expand
-function PersonSlot({ node, isRoot, excludeChildId, navigate, expandedIds, lazyData, loadingIds, onToggle }: {
-  node: SiblingNode; isRoot?: boolean; excludeChildId?: number;
+// hidePareja: suppress pareja display (used for ancestor nodes — their partner is already shown as a separate branch)
+function PersonSlot({ node, isRoot, excludeChildId, hidePareja, navigate, expandedIds, lazyData, loadingIds, onToggle }: {
+  node: SiblingNode; isRoot?: boolean; excludeChildId?: number; hidePareja?: boolean;
 } & SlotProps) {
   const lazy = lazyData.get(node.id);
-  const pareja = lazy?.pareja ?? node.pareja;
+  const pareja = hidePareja ? undefined : (lazy?.pareja ?? node.pareja);
   const rawHijos = lazy?.hijos ?? node.hijos ?? [];
   const hijos = excludeChildId != null ? rawHijos.filter(h => h.id !== excludeChildId) : rawHijos;
   const hijosLoaded = lazy != null || node.hijos != null;
@@ -175,6 +176,7 @@ function HBranch({ node, gen, siblings, excludeChildId, sibsVisible, onToggleSib
           node={node as unknown as SiblingNode}
           isRoot={gen === 1}
           excludeChildId={excludeChildId}
+          hidePareja={gen > 1}
           {...slotProps}
         />
 
@@ -287,6 +289,7 @@ function VBranch({ node, gen, siblings, excludeChildId, sibsVisible, onToggleSib
           node={node as unknown as SiblingNode}
           isRoot={gen === 1}
           excludeChildId={excludeChildId}
+          hidePareja={gen > 1}
           {...slotProps}
         />
 
