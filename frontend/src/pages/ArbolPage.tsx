@@ -26,22 +26,6 @@ const MARGIN_OPTIONS = [5, 10, 15, 20, 25] as const;
 
 type PersonBase = Pick<AncestorNode, 'id' | 'nombre' | 'apellido' | 'sexo' | 'fallecida' | 'nac_dia' | 'nac_mes' | 'nac_anio' | 'nac_tipo' | 'def_dia' | 'def_mes' | 'def_anio' | 'def_tipo'>;
 
-function sortByAge(a: PersonBase, b: PersonBase): number {
-  if (a.nac_anio == null && b.nac_anio == null) return 0;
-  if (a.nac_anio == null) return 1;
-  if (b.nac_anio == null) return -1;
-  return a.nac_anio - b.nac_anio;
-}
-
-// Male → all sibs left + spacers right (root centered). Female → spacers left + all sibs right.
-function buildSibLayout(root: AncestorNode, siblings: SiblingNode[]) {
-  const sorted = [...siblings].sort(sortByAge);
-  if (root.sexo === 'M') {
-    return { left: sorted, right: [] as SiblingNode[], leftSpacers: 0, rightSpacers: sorted.length };
-  }
-  return { left: [] as SiblingNode[], right: sorted, leftSpacers: sorted.length, rightSpacers: 0 };
-}
-
 function fmtDate(dia: number | null, mes: number | null, anio: number | null, tipo: string): string {
   if (tipo === 'desconocida') return '';
   if (tipo === 'aproximada' && anio) return `≈${anio}`;
@@ -99,16 +83,20 @@ type SlotProps = {
   onToggle: (id: number, hasPreloaded: boolean) => void;
 };
 
-function PersonSlot({ node, isRoot, navigate, expandedIds, lazyData, loadingIds, onToggle }: {
-  node: SiblingNode; isRoot?: boolean;
+// PersonSlot: renders one person card + their partner + expandable children
+// excludeChildId: child already shown in the ancestor chain — excluded from the hijos expand
+function PersonSlot({ node, isRoot, excludeChildId, navigate, expandedIds, lazyData, loadingIds, onToggle }: {
+  node: SiblingNode; isRoot?: boolean; excludeChildId?: number;
 } & SlotProps) {
   const lazy = lazyData.get(node.id);
   const pareja = lazy?.pareja ?? node.pareja;
-  const hijos = lazy?.hijos ?? node.hijos ?? [];
-  const hasChildren = hijos.length > 0 || (node.hasHijos ?? false);
+  const rawHijos = lazy?.hijos ?? node.hijos ?? [];
+  const hijos = excludeChildId != null ? rawHijos.filter(h => h.id !== excludeChildId) : rawHijos;
+  const hijosLoaded = lazy != null || node.hijos != null;
+  const hasChildren = hijos.length > 0 || (!hijosLoaded && (node.hasHijos ?? false));
   const expanded = expandedIds.has(node.id);
   const loading = loadingIds.has(node.id);
-  const hasPreloaded = (node.hijos !== undefined && node.hijos.length > 0) || hijos.length > 0;
+  const hasPreloaded = hijosLoaded;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -125,7 +113,7 @@ function PersonSlot({ node, isRoot, navigate, expandedIds, lazyData, loadingIds,
         <button
           onClick={() => onToggle(node.id, hasPreloaded)}
           disabled={loading}
-          style={{ background: 'none', border: '1px solid #ddd', borderRadius: 10, cursor: 'pointer', fontSize: '0.62rem', color: '#999', padding: '1px 8px', marginTop: 5, lineHeight: 1.5 }}
+          style={expandDownBtn}
         >
           {loading ? '…' : expanded ? '▲' : '▼'}
         </button>
@@ -151,43 +139,59 @@ function PersonSlot({ node, isRoot, navigate, expandedIds, lazyData, loadingIds,
   );
 }
 
-function SibRow({ left, right, leftSpacers, rightSpacers, root, column,
-  navigate, expandedIds, lazyData, loadingIds, onToggle }: {
-  left: SiblingNode[]; right: SiblingNode[];
-  leftSpacers: number; rightSpacers: number;
-  root: AncestorNode; column?: boolean;
-} & SlotProps) {
-  const sp: React.CSSProperties = { width: 115, height: 148, flexShrink: 0, visibility: 'hidden' };
-  const slotProps: SlotProps = { navigate, expandedIds, lazyData, loadingIds, onToggle };
-  return (
-    <div style={{ display: 'flex', flexDirection: column ? 'column' : 'row', gap: 8, alignItems: 'flex-start' }}>
-      {Array.from({ length: leftSpacers }).map((_, i) => <div key={`sl${i}`} style={sp} />)}
-      {left.map(p => <PersonSlot key={p.id} node={p} {...slotProps} />)}
-      <PersonSlot node={root as unknown as SiblingNode} isRoot {...slotProps} />
-      {right.map(p => <PersonSlot key={p.id} node={p} {...slotProps} />)}
-      {Array.from({ length: rightSpacers }).map((_, i) => <div key={`sr${i}`} style={sp} />)}
-    </div>
-  );
-}
+// ─── HBranch (horizontal mode: tree grows right, siblings stack above/below) ──
 
-function HBranch({ node, gen, siblings, navigate, expandedIds, lazyData, loadingIds, onToggle }: {
+function HBranch({ node, gen, siblings, excludeChildId, sibsVisible, onToggleSibs,
+  navigate, expandedIds, lazyData, loadingIds, onToggle }: {
   node: AncestorNode; gen: number; siblings?: SiblingNode[];
+  excludeChildId?: number; sibsVisible?: boolean; onToggleSibs?: () => void;
 } & SlotProps) {
   const padre = gen < MAX_GENS ? node.padre : undefined;
   const madre = gen < MAX_GENS ? node.madre : undefined;
   const hasParents = !!(padre || madre);
   const sibList = siblings ?? [];
   const hasSiblings = sibList.length > 0;
-  const { left, right, leftSpacers, rightSpacers } = hasSiblings ? buildSibLayout(node, sibList) : { left: [], right: [], leftSpacers: 0, rightSpacers: 0 };
+  const isMale = node.sexo !== 'F';
   const slotProps: SlotProps = { navigate, expandedIds, lazyData, loadingIds, onToggle };
 
+  // In horizontal mode siblings stack vertically (above for M, below for F)
   return (
     <div style={{ display: 'flex', alignItems: 'center' }}>
-      {hasSiblings ? (
-        <SibRow left={left} right={right} leftSpacers={leftSpacers} rightSpacers={rightSpacers} root={node} column {...slotProps} />
-      ) : (
-        <PersonSlot node={node as unknown as SiblingNode} {...slotProps} />
-      )}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+        {/* Siblings above root (male) */}
+        {hasSiblings && sibsVisible && isMale && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+            {sibList.map(s => <PersonSlot key={s.id} node={s} {...slotProps} />)}
+          </div>
+        )}
+        {/* Toggle button above card (male) */}
+        {hasSiblings && isMale && onToggleSibs && (
+          <button onClick={onToggleSibs} style={sibToggleBtn} title={sibsVisible ? 'Ocultar hermanos' : 'Ver hermanos'}>
+            {sibsVisible ? '▼' : '▲'}
+          </button>
+        )}
+
+        <PersonSlot
+          node={node as unknown as SiblingNode}
+          isRoot={gen === 1}
+          excludeChildId={excludeChildId}
+          {...slotProps}
+        />
+
+        {/* Toggle button below card (female) */}
+        {hasSiblings && !isMale && onToggleSibs && (
+          <button onClick={onToggleSibs} style={sibToggleBtn} title={sibsVisible ? 'Ocultar hermanos' : 'Ver hermanos'}>
+            {sibsVisible ? '▲' : '▼'}
+          </button>
+        )}
+        {/* Siblings below root (female) */}
+        {hasSiblings && sibsVisible && !isMale && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+            {sibList.map(s => <PersonSlot key={s.id} node={s} {...slotProps} />)}
+          </div>
+        )}
+      </div>
+
       {hasParents && (
         <>
           <div style={{ width: 8, height: 2, background: '#d8d8d8', flexShrink: 0 }} />
@@ -206,13 +210,13 @@ function HBranch({ node, gen, siblings, navigate, expandedIds, lazyData, loading
               {padre && (
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   <div style={{ width: 8, height: 2, background: '#d8d8d8', flexShrink: 0 }} />
-                  <HBranch node={padre} gen={gen + 1} siblings={undefined} {...slotProps} />
+                  <HBranch node={padre} gen={gen + 1} excludeChildId={node.id} {...slotProps} />
                 </div>
               )}
               {madre && (
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   <div style={{ width: 8, height: 2, background: '#d8d8d8', flexShrink: 0 }} />
-                  <HBranch node={madre} gen={gen + 1} siblings={undefined} {...slotProps} />
+                  <HBranch node={madre} gen={gen + 1} excludeChildId={node.id} {...slotProps} />
                 </div>
               )}
             </div>
@@ -223,17 +227,22 @@ function HBranch({ node, gen, siblings, navigate, expandedIds, lazyData, loading
   );
 }
 
-function VBranch({ node, gen, siblings, navigate, expandedIds, lazyData, loadingIds, onToggle }: {
+// ─── VBranch (vertical mode: tree grows up, siblings go left/right) ──────────
+
+function VBranch({ node, gen, siblings, excludeChildId, sibsVisible, onToggleSibs,
+  navigate, expandedIds, lazyData, loadingIds, onToggle }: {
   node: AncestorNode; gen: number; siblings?: SiblingNode[];
+  excludeChildId?: number; sibsVisible?: boolean; onToggleSibs?: () => void;
 } & SlotProps) {
   const padre = gen < MAX_GENS ? node.padre : undefined;
   const madre = gen < MAX_GENS ? node.madre : undefined;
   const hasParents = !!(padre || madre);
   const sibList = siblings ?? [];
   const hasSiblings = sibList.length > 0;
-  const { left, right, leftSpacers, rightSpacers } = hasSiblings ? buildSibLayout(node, sibList) : { left: [], right: [], leftSpacers: 0, rightSpacers: 0 };
+  const isMale = node.sexo !== 'F';
   const slotProps: SlotProps = { navigate, expandedIds, lazyData, loadingIds, onToggle };
 
+  // In vertical mode siblings go left (M) or right (F) of root card
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       {hasParents && (
@@ -241,13 +250,13 @@ function VBranch({ node, gen, siblings, navigate, expandedIds, lazyData, loading
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', borderBottom: '2px solid #d8d8d8' }}>
             {padre && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <VBranch node={padre} gen={gen + 1} siblings={undefined} {...slotProps} />
+                <VBranch node={padre} gen={gen + 1} excludeChildId={node.id} {...slotProps} />
                 <div style={{ width: 2, height: 10, background: '#d8d8d8' }} />
               </div>
             )}
             {madre && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <VBranch node={madre} gen={gen + 1} siblings={undefined} {...slotProps} />
+                <VBranch node={madre} gen={gen + 1} excludeChildId={node.id} {...slotProps} />
                 <div style={{ width: 2, height: 10, background: '#d8d8d8' }} />
               </div>
             )}
@@ -255,11 +264,48 @@ function VBranch({ node, gen, siblings, navigate, expandedIds, lazyData, loading
           <div style={{ width: 2, height: 10, background: '#d8d8d8', flexShrink: 0 }} />
         </>
       )}
-      {hasSiblings ? (
-        <SibRow left={left} right={right} leftSpacers={leftSpacers} rightSpacers={rightSpacers} root={node} {...slotProps} />
-      ) : (
-        <PersonSlot node={node as unknown as SiblingNode} {...slotProps} />
-      )}
+
+      {/* Root row with optional siblings on sides */}
+      <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+        {/* Siblings left + connector (male) */}
+        {hasSiblings && sibsVisible && isMale && (
+          <>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+              {sibList.map(s => <PersonSlot key={s.id} node={s} {...slotProps} />)}
+            </div>
+            <div style={{ width: 8, height: 2, background: '#d8d8d8', marginTop: 74 }} />
+          </>
+        )}
+        {/* Left arrow button (male) */}
+        {hasSiblings && isMale && onToggleSibs && (
+          <button onClick={onToggleSibs} style={{ ...sibToggleBtn, marginTop: 62 }} title={sibsVisible ? 'Ocultar hermanos' : 'Ver hermanos'}>
+            {sibsVisible ? '▶' : '◀'}
+          </button>
+        )}
+
+        <PersonSlot
+          node={node as unknown as SiblingNode}
+          isRoot={gen === 1}
+          excludeChildId={excludeChildId}
+          {...slotProps}
+        />
+
+        {/* Right arrow button (female) */}
+        {hasSiblings && !isMale && onToggleSibs && (
+          <button onClick={onToggleSibs} style={{ ...sibToggleBtn, marginTop: 62 }} title={sibsVisible ? 'Ocultar hermanos' : 'Ver hermanos'}>
+            {sibsVisible ? '◀' : '▶'}
+          </button>
+        )}
+        {/* Siblings right + connector (female) */}
+        {hasSiblings && sibsVisible && !isMale && (
+          <>
+            <div style={{ width: 8, height: 2, background: '#d8d8d8', marginTop: 74 }} />
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+              {sibList.map(s => <PersonSlot key={s.id} node={s} {...slotProps} />)}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -280,7 +326,6 @@ function PdfExportModal({ root, orientation, onClose }: {
 
   const paper = PAPER_SIZES[paperIdx];
 
-  // Calculate effective landscape based on tree aspect ratio
   const treeEl = document.getElementById('arbol-tree-content');
   const treeW = treeEl?.scrollWidth ?? 600;
   const treeH = treeEl?.scrollHeight ?? 400;
@@ -289,10 +334,9 @@ function PdfExportModal({ root, orientation, onClose }: {
   const effectiveLandscape = orientMode === 'auto' ? autoLandscape
     : orientMode === 'landscape';
 
-  const pageW = effectiveLandscape ? paper.h : paper.w; // mm
-  const pageH = effectiveLandscape ? paper.w : paper.h; // mm
+  const pageW = effectiveLandscape ? paper.h : paper.w;
+  const pageH = effectiveLandscape ? paper.w : paper.h;
 
-  // Scale for actual PDF (96dpi CSS pixels)
   const mmToPx = 96 / 25.4;
   const pdfScale = Math.min(
     (pageW - 2 * marginsMm) * mmToPx / treeW,
@@ -300,14 +344,12 @@ function PdfExportModal({ root, orientation, onClose }: {
   );
   const scalePercent = Math.round(pdfScale * 100);
 
-  // Preview paper shape (fit in a max area)
   const PREV_MAX_W = 440;
   const PREV_MAX_H = 340;
   const paperRatio = Math.min(PREV_MAX_W / pageW, PREV_MAX_H / pageH);
   const prevPaperW = pageW * paperRatio;
   const prevPaperH = pageH * paperRatio;
 
-  // Tree scale inside preview
   const prevTreeScale = Math.min(
     (pageW - 2 * marginsMm) * paperRatio / treeW,
     (pageH - 2 * marginsMm) * paperRatio / treeH
@@ -339,14 +381,12 @@ function PdfExportModal({ root, orientation, onClose }: {
   return (
     <div style={pdfOverlay}>
       <div style={pdfDialog}>
-        {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Guardar como PDF</h2>
           <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.3rem', color: '#888' }}>×</button>
         </div>
 
         <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-          {/* Settings panel */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 180 }}>
             <div style={settingRow}>
               <label style={settingLabel}>Tamaño</label>
@@ -398,7 +438,6 @@ function PdfExportModal({ root, orientation, onClose }: {
             </button>
           </div>
 
-          {/* Preview */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
             <p style={{ margin: 0, fontSize: '0.75rem', color: '#aaa' }}>Vista previa</p>
             <div style={{
@@ -406,7 +445,6 @@ function PdfExportModal({ root, orientation, onClose }: {
               background: '#fff', boxShadow: '0 2px 16px rgba(0,0,0,0.18)',
               position: 'relative', overflow: 'hidden', flexShrink: 0,
             }}>
-              {/* Margin indicator */}
               <div style={{
                 position: 'absolute',
                 top: prevMarginPx, left: prevMarginPx,
@@ -450,6 +488,7 @@ export default function ArbolPage() {
   const [view, setView] = useState<View>('bio');
   const [showPdf, setShowPdf] = useState(false);
 
+  const [sibsVisible, setSibsVisible] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [lazyData, setLazyData] = useState<Map<number, { pareja?: SiblingNode; hijos: SiblingNode[] }>>(new Map());
   const [loadingIds, setLoadingIds] = useState<Set<number>>(new Set());
@@ -475,6 +514,7 @@ export default function ArbolPage() {
     setLoading(true);
     setExpandedIds(new Set());
     setLazyData(new Map());
+    setSibsVisible(false);
     try {
       const tree = await personasApi.ancestros(id, MAX_GENS, v);
       setRoot(tree);
@@ -504,6 +544,7 @@ export default function ArbolPage() {
 
   async function changeOrientation(o: Orientation) {
     setOrientation(o);
+    setSibsVisible(false);
     await configApi.set(CFG_ORIENTATION, o);
   }
 
@@ -584,8 +625,20 @@ export default function ArbolPage() {
           <div style={{ overflowX: 'auto', overflowY: 'auto', paddingBottom: 24 }}>
             <div id="arbol-tree-content" style={{ display: 'inline-block', padding: '16px 8px' }}>
               {orientation === 'horizontal'
-                ? <HBranch node={root} gen={1} siblings={root.hermanos} {...branchProps} />
-                : <VBranch node={root} gen={1} siblings={root.hermanos} {...branchProps} />
+                ? <HBranch
+                    node={root} gen={1}
+                    siblings={root.hermanos}
+                    sibsVisible={sibsVisible}
+                    onToggleSibs={() => setSibsVisible(v => !v)}
+                    {...branchProps}
+                  />
+                : <VBranch
+                    node={root} gen={1}
+                    siblings={root.hermanos}
+                    sibsVisible={sibsVisible}
+                    onToggleSibs={() => setSibsVisible(v => !v)}
+                    {...branchProps}
+                  />
               }
             </div>
           </div>
@@ -622,6 +675,19 @@ const toggleGroup: React.CSSProperties = { display: 'flex', border: '1px solid #
 const toggleBtn: React.CSSProperties = { border: 'none', background: '#f5f5f5', cursor: 'pointer', padding: '5px 11px', fontSize: '0.82rem', color: '#555' };
 const toggleActive: React.CSSProperties = { background: '#1a1a1a', color: '#fff' };
 const pdfBtn: React.CSSProperties = { border: '1px solid #1a1a1a', background: '#1a1a1a', color: '#fff', cursor: 'pointer', padding: '5px 12px', borderRadius: 4, fontSize: '0.82rem', fontWeight: 600 };
+
+const expandDownBtn: React.CSSProperties = {
+  background: 'none', border: '1px solid #ddd', borderRadius: 10,
+  cursor: 'pointer', fontSize: '0.62rem', color: '#999',
+  padding: '1px 8px', marginTop: 5, lineHeight: 1.5,
+};
+const sibToggleBtn: React.CSSProperties = {
+  background: '#fff', border: '1px solid #d0d0d0', borderRadius: '50%',
+  width: 22, height: 22, minWidth: 22,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  cursor: 'pointer', fontSize: '0.6rem', color: '#aaa', padding: 0,
+  flexShrink: 0, lineHeight: 1,
+};
 
 const pdfOverlay: React.CSSProperties = {
   position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
