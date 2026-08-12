@@ -86,16 +86,17 @@ type SlotProps = {
 // PersonSlot: renders one person card + their partner + expandable children
 // excludeChildId: child already shown in the ancestor chain — excluded from the hijos expand
 // hidePareja: suppress pareja display (ancestor nodes — partner is shown as a separate branch)
-function PersonSlot({ node, isRoot, excludeChildId, hidePareja, navigate, expandedIds, lazyData, loadingIds, onToggle }: {
-  node: SiblingNode; isRoot?: boolean; excludeChildId?: number; hidePareja?: boolean;
+// suppressChildExpand: don't show ▼ or expanded children (ancestor nodes handle it at branch level)
+function PersonSlot({ node, isRoot, excludeChildId, hidePareja, suppressChildExpand, navigate, expandedIds, lazyData, loadingIds, onToggle }: {
+  node: SiblingNode; isRoot?: boolean; excludeChildId?: number; hidePareja?: boolean; suppressChildExpand?: boolean;
 } & SlotProps) {
   const lazy = lazyData.get(node.id);
   const pareja = hidePareja ? undefined : (lazy?.pareja ?? node.pareja);
   const rawHijos = lazy?.hijos ?? node.hijos ?? [];
   const hijos = excludeChildId != null ? rawHijos.filter(h => h.id !== excludeChildId) : rawHijos;
   const hijosLoaded = lazy != null || node.hijos != null;
-  const hasChildren = hijos.length > 0 || (!hijosLoaded && (node.hasHijos ?? false));
-  const expanded = expandedIds.has(node.id);
+  const hasChildren = !suppressChildExpand && (hijos.length > 0 || (!hijosLoaded && (node.hasHijos ?? false)));
+  const expanded = !suppressChildExpand && expandedIds.has(node.id);
   const loading = loadingIds.has(node.id);
   const hasPreloaded = hijosLoaded;
 
@@ -155,17 +156,38 @@ function HBranch({ node, gen, siblings, excludeChildId, sibsVisible, onToggleSib
   const isMale = node.sexo !== 'F';
   const slotProps: SlotProps = { navigate, expandedIds, lazyData, loadingIds, onToggle };
 
+  // Ancestor children shown at the same branch level (gen > 1 only)
+  const nodeAsS = node as unknown as SiblingNode;
+  const ancLazy = gen > 1 ? lazyData.get(node.id) : undefined;
+  const ancRaw = ancLazy?.hijos ?? nodeAsS.hijos ?? [];
+  const ancHijos = excludeChildId != null ? ancRaw.filter(h => h.id !== excludeChildId) : ancRaw;
+  const ancLoaded = ancLazy != null || nodeAsS.hijos != null;
+  const ancHasHijos = gen > 1 && (ancHijos.length > 0 || (!ancLoaded && (nodeAsS.hasHijos ?? false)));
+  const ancExpanded = gen > 1 && expandedIds.has(node.id);
+  const ancLoading = gen > 1 && loadingIds.has(node.id);
+
   // In horizontal mode siblings stack vertically (above for M, below for F)
   return (
     <div style={{ display: 'flex', alignItems: 'center' }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-        {/* Siblings above root (male) */}
+        {/* Ancestor children above (gen > 1, male) — same visual level as this node */}
+        {ancHasHijos && ancExpanded && isMale && ancHijos.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+            {ancHijos.map(s => <PersonSlot key={s.id} node={s} {...slotProps} />)}
+          </div>
+        )}
+        {ancHasHijos && isMale && (
+          <button onClick={() => onToggle(node.id, ancLoaded)} disabled={ancLoading} style={sibToggleBtn}>
+            {ancLoading ? '…' : ancExpanded ? '▼' : '▲'}
+          </button>
+        )}
+
+        {/* Siblings above root (gen = 1, male) */}
         {hasSiblings && sibsVisible && isMale && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
             {sibList.map(s => <PersonSlot key={s.id} node={s} {...slotProps} />)}
           </div>
         )}
-        {/* Toggle button above card (male) */}
         {hasSiblings && isMale && onToggleSibs && (
           <button onClick={onToggleSibs} style={sibToggleBtn} title={sibsVisible ? 'Ocultar hermanos' : 'Ver hermanos'}>
             {sibsVisible ? '▼' : '▲'}
@@ -173,23 +195,35 @@ function HBranch({ node, gen, siblings, excludeChildId, sibsVisible, onToggleSib
         )}
 
         <PersonSlot
-          node={node as unknown as SiblingNode}
+          node={nodeAsS}
           isRoot={gen === 1}
           excludeChildId={excludeChildId}
           hidePareja={gen > 1}
+          suppressChildExpand={gen > 1}
           {...slotProps}
         />
 
-        {/* Toggle button below card (female) */}
         {hasSiblings && !isMale && onToggleSibs && (
           <button onClick={onToggleSibs} style={sibToggleBtn} title={sibsVisible ? 'Ocultar hermanos' : 'Ver hermanos'}>
             {sibsVisible ? '▲' : '▼'}
           </button>
         )}
-        {/* Siblings below root (female) */}
+        {/* Siblings below root (gen = 1, female) */}
         {hasSiblings && sibsVisible && !isMale && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
             {sibList.map(s => <PersonSlot key={s.id} node={s} {...slotProps} />)}
+          </div>
+        )}
+
+        {ancHasHijos && !isMale && (
+          <button onClick={() => onToggle(node.id, ancLoaded)} disabled={ancLoading} style={sibToggleBtn}>
+            {ancLoading ? '…' : ancExpanded ? '▲' : '▼'}
+          </button>
+        )}
+        {/* Ancestor children below (gen > 1, female) */}
+        {ancHasHijos && ancExpanded && !isMale && ancHijos.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+            {ancHijos.map(s => <PersonSlot key={s.id} node={s} {...slotProps} />)}
           </div>
         )}
       </div>
@@ -244,6 +278,16 @@ function VBranch({ node, gen, siblings, excludeChildId, sibsVisible, onToggleSib
   const isMale = node.sexo !== 'F';
   const slotProps: SlotProps = { navigate, expandedIds, lazyData, loadingIds, onToggle };
 
+  // Ancestor children shown at the same row level (gen > 1 only)
+  const nodeAsS = node as unknown as SiblingNode;
+  const ancLazy = gen > 1 ? lazyData.get(node.id) : undefined;
+  const ancRaw = ancLazy?.hijos ?? nodeAsS.hijos ?? [];
+  const ancHijos = excludeChildId != null ? ancRaw.filter(h => h.id !== excludeChildId) : ancRaw;
+  const ancLoaded = ancLazy != null || nodeAsS.hijos != null;
+  const ancHasHijos = gen > 1 && (ancHijos.length > 0 || (!ancLoaded && (nodeAsS.hasHijos ?? false)));
+  const ancExpanded = gen > 1 && expandedIds.has(node.id);
+  const ancLoading = gen > 1 && loadingIds.has(node.id);
+
   // In vertical mode siblings go left (M) or right (F) of root card
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -267,9 +311,10 @@ function VBranch({ node, gen, siblings, excludeChildId, sibsVisible, onToggleSib
         </>
       )}
 
-      {/* Root row with optional siblings on sides */}
+      {/* Row: ancestor children left (gen>1,M) | button | node | button | ancestor children right (gen>1,F) */}
+      {/* OR: siblings left (gen=1,M) | button | node | button | siblings right (gen=1,F) */}
       <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-        {/* Siblings left + connector (male) */}
+        {/* Siblings left (gen=1, male) */}
         {hasSiblings && sibsVisible && isMale && (
           <>
             <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
@@ -278,28 +323,57 @@ function VBranch({ node, gen, siblings, excludeChildId, sibsVisible, onToggleSib
             <div style={{ width: 8, height: 2, background: '#d8d8d8', marginTop: 74 }} />
           </>
         )}
-        {/* Left arrow button (male) */}
         {hasSiblings && isMale && onToggleSibs && (
           <button onClick={onToggleSibs} style={{ ...sibToggleBtn, marginTop: 62 }} title={sibsVisible ? 'Ocultar hermanos' : 'Ver hermanos'}>
             {sibsVisible ? '▶' : '◀'}
           </button>
         )}
 
+        {/* Ancestor children left (gen>1, male) */}
+        {ancHasHijos && ancExpanded && isMale && ancHijos.length > 0 && (
+          <>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+              {ancHijos.map(s => <PersonSlot key={s.id} node={s} {...slotProps} />)}
+            </div>
+            <div style={{ width: 8, height: 2, background: '#d8d8d8', marginTop: 74 }} />
+          </>
+        )}
+        {ancHasHijos && isMale && (
+          <button onClick={() => onToggle(node.id, ancLoaded)} disabled={ancLoading} style={{ ...sibToggleBtn, marginTop: 62 }}>
+            {ancLoading ? '…' : ancExpanded ? '▶' : '◀'}
+          </button>
+        )}
+
         <PersonSlot
-          node={node as unknown as SiblingNode}
+          node={nodeAsS}
           isRoot={gen === 1}
           excludeChildId={excludeChildId}
           hidePareja={gen > 1}
+          suppressChildExpand={gen > 1}
           {...slotProps}
         />
 
-        {/* Right arrow button (female) */}
+        {ancHasHijos && !isMale && (
+          <button onClick={() => onToggle(node.id, ancLoaded)} disabled={ancLoading} style={{ ...sibToggleBtn, marginTop: 62 }}>
+            {ancLoading ? '…' : ancExpanded ? '◀' : '▶'}
+          </button>
+        )}
+        {/* Ancestor children right (gen>1, female) */}
+        {ancHasHijos && ancExpanded && !isMale && ancHijos.length > 0 && (
+          <>
+            <div style={{ width: 8, height: 2, background: '#d8d8d8', marginTop: 74 }} />
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+              {ancHijos.map(s => <PersonSlot key={s.id} node={s} {...slotProps} />)}
+            </div>
+          </>
+        )}
+
         {hasSiblings && !isMale && onToggleSibs && (
           <button onClick={onToggleSibs} style={{ ...sibToggleBtn, marginTop: 62 }} title={sibsVisible ? 'Ocultar hermanos' : 'Ver hermanos'}>
             {sibsVisible ? '◀' : '▶'}
           </button>
         )}
-        {/* Siblings right + connector (female) */}
+        {/* Siblings right (gen=1, female) */}
         {hasSiblings && sibsVisible && !isMale && (
           <>
             <div style={{ width: 8, height: 2, background: '#d8d8d8', marginTop: 74 }} />
@@ -496,6 +570,62 @@ export default function ArbolPage() {
   const [lazyData, setLazyData] = useState<Map<number, { pareja?: SiblingNode; hijos: SiblingNode[] }>>(new Map());
   const [loadingIds, setLoadingIds] = useState<Set<number>>(new Set());
 
+  // Zoom / pan
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const zoomRef = useRef(1);
+  const panRef = useRef({ x: 0, y: 0 });
+  const dragStart = useRef({ mx: 0, my: 0, px: 0, py: 0 });
+  const didDrag = useRef(false);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  zoomRef.current = zoom;
+  panRef.current = pan;
+
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.1 : -0.1;
+      const rect = el.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const prevZ = zoomRef.current;
+      const newZ = Math.max(0.2, Math.min(3, parseFloat((prevZ + delta).toFixed(2))));
+      const ratio = newZ / prevZ;
+      zoomRef.current = newZ;
+      panRef.current = {
+        x: mx - (mx - panRef.current.x) * ratio,
+        y: my - (my - panRef.current.y) * ratio,
+      };
+      setZoom(newZ);
+      setPan({ ...panRef.current });
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
+  function onViewportMouseDown(e: React.MouseEvent) {
+    if ((e.target as HTMLElement).closest('button, a, input, select')) return;
+    didDrag.current = false;
+    setDragging(true);
+    dragStart.current = { mx: e.clientX, my: e.clientY, px: pan.x, py: pan.y };
+  }
+  function onViewportMouseMove(e: React.MouseEvent) {
+    if (!dragging) return;
+    const dx = e.clientX - dragStart.current.mx;
+    const dy = e.clientY - dragStart.current.my;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) didDrag.current = true;
+    setPan({ x: dragStart.current.px + dx, y: dragStart.current.py + dy });
+  }
+  function onViewportMouseUp() { setDragging(false); }
+
+  function goTo(id: number) {
+    if (didDrag.current) return;
+    navigate(`/persona/${id}`);
+  }
+
   async function handleToggle(id: number, hasPreloaded: boolean) {
     if (expandedIds.has(id)) {
       setExpandedIds(prev => { const n = new Set(prev); n.delete(id); return n; });
@@ -518,6 +648,8 @@ export default function ArbolPage() {
     setExpandedIds(new Set());
     setLazyData(new Map());
     setSibsVisible(false);
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
     try {
       const tree = await personasApi.ancestros(id, MAX_GENS, v);
       setRoot(tree);
@@ -574,10 +706,6 @@ export default function ArbolPage() {
     await configApi.set(CFG_ROOT_NAME, null);
   }
 
-  function goTo(id: number) {
-    navigate(`/persona/${id}`);
-  }
-
   const branchProps: SlotProps = {
     navigate: goTo,
     expandedIds,
@@ -586,66 +714,101 @@ export default function ArbolPage() {
     onToggle: handleToggle,
   };
 
+  function handleToggleSibs() {
+    const contentEl = document.getElementById('arbol-tree-content');
+    const needsCompensation = root && root.sexo !== 'F';
+    if (contentEl && needsCompensation) {
+      const prevW = contentEl.offsetWidth;
+      const prevH = contentEl.offsetHeight;
+      setSibsVisible(v => !v);
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const dW = contentEl.offsetWidth - prevW;
+        const dH = contentEl.offsetHeight - prevH;
+        if (orientation === 'vertical' && dW !== 0) {
+          setPan(p => ({ ...p, x: p.x - dW * zoomRef.current }));
+        } else if (orientation === 'horizontal' && dH !== 0) {
+          setPan(p => ({ ...p, y: p.y - dH * zoomRef.current }));
+        }
+      }));
+    } else {
+      setSibsVisible(v => !v);
+    }
+  }
+
   return (
-    <div style={{ padding: '24px 20px', minHeight: '100vh', background: '#fafafa' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#fafafa', overflow: 'hidden' }}>
+      {/* Toolbar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px', flexWrap: 'wrap', flexShrink: 0, borderBottom: '1px solid #eee', background: '#fafafa' }}>
         <button onClick={() => navigate('/')} style={backBtn}>← Índice</button>
         <h1 style={{ fontSize: '1.3rem', fontWeight: 700, margin: 0 }}>Árbol Genealógico</h1>
         {root && (
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={toggleGroup}>
-              <button style={{ ...toggleBtn, ...(view === 'bio' ? toggleActive : {}) }} onClick={() => changeView('bio')}>Biológico</button>
-              <button style={{ ...toggleBtn, ...(view === 'adoptivo' ? toggleActive : {}) }} onClick={() => changeView('adoptivo')}>Adoptivo</button>
+          <>
+            <span style={{ fontSize: '0.9rem', color: '#555', marginLeft: 8 }}>
+              — <strong>{rootName || `${root.apellido}, ${root.nombre}`}</strong>
+            </span>
+            <button onClick={handleCambiar} style={changeBtn}>Cambiar</button>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={toggleGroup}>
+                <button style={{ ...toggleBtn, ...(view === 'bio' ? toggleActive : {}) }} onClick={() => changeView('bio')}>Biológico</button>
+                <button style={{ ...toggleBtn, ...(view === 'adoptivo' ? toggleActive : {}) }} onClick={() => changeView('adoptivo')}>Adoptivo</button>
+              </div>
+              <div style={toggleGroup}>
+                <button style={{ ...toggleBtn, ...(orientation === 'horizontal' ? toggleActive : {}) }} onClick={() => changeOrientation('horizontal')} title="Horizontal">↔</button>
+                <button style={{ ...toggleBtn, ...(orientation === 'vertical' ? toggleActive : {}) }} onClick={() => changeOrientation('vertical')} title="Vertical">↕</button>
+              </div>
+              {/* Zoom controls */}
+              <div style={toggleGroup}>
+                <button style={toggleBtn} onClick={() => setZoom(z => Math.max(0.2, parseFloat((z - 0.1).toFixed(2))))}>−</button>
+                <span style={{ fontSize: '0.78rem', color: '#555', padding: '5px 8px', minWidth: 42, textAlign: 'center', userSelect: 'none' }}>
+                  {Math.round(zoom * 100)}%
+                </span>
+                <button style={toggleBtn} onClick={() => setZoom(z => Math.min(3, parseFloat((z + 0.1).toFixed(2))))}>+</button>
+              </div>
+              <button style={changeBtn} onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} title="Restablecer vista">⌂</button>
+              <button style={pdfBtn} onClick={() => setShowPdf(true)}>Guardar PDF</button>
             </div>
-            <div style={toggleGroup}>
-              <button style={{ ...toggleBtn, ...(orientation === 'horizontal' ? toggleActive : {}) }} onClick={() => changeOrientation('horizontal')} title="Horizontal">↔</button>
-              <button style={{ ...toggleBtn, ...(orientation === 'vertical' ? toggleActive : {}) }} onClick={() => changeOrientation('vertical')} title="Vertical">↕</button>
-            </div>
-            <button style={pdfBtn} onClick={() => setShowPdf(true)}>Guardar PDF</button>
-          </div>
+          </>
         )}
       </div>
 
       {!root && !loading && (
-        <div style={searchCard}>
-          <p style={{ color: '#555', marginBottom: 12, fontSize: '0.9rem' }}>
-            Buscá una persona para ver su árbol de ancestros (hasta 5 generaciones).
-          </p>
-          <PersonaSearchInput placeholder="Buscar persona raíz..." onSelect={handleSelect} allowCreate={false} />
+        <div style={{ padding: '24px 20px' }}>
+          <div style={searchCard}>
+            <p style={{ color: '#555', marginBottom: 12, fontSize: '0.9rem' }}>
+              Buscá una persona para ver su árbol de ancestros (hasta 5 generaciones).
+            </p>
+            <PersonaSearchInput placeholder="Buscar persona raíz..." onSelect={handleSelect} allowCreate={false} />
+          </div>
         </div>
       )}
 
-      {loading && <div style={{ color: '#999', fontSize: '0.9rem', marginTop: 8 }}>Cargando...</div>}
+      {loading && <div style={{ color: '#999', fontSize: '0.9rem', padding: '24px 20px' }}>Cargando...</div>}
 
       {root && !loading && (
-        <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-            <span style={{ fontSize: '0.9rem', color: '#555' }}>
-              Árbol de <strong>{rootName || `${root.apellido}, ${root.nombre}`}</strong>
-            </span>
-            <button onClick={handleCambiar} style={changeBtn}>Cambiar</button>
+        <div
+          ref={viewportRef}
+          style={{ flex: 1, overflow: 'hidden', position: 'relative', cursor: dragging ? 'grabbing' : 'grab', userSelect: 'none' }}
+          onMouseDown={onViewportMouseDown}
+          onMouseMove={onViewportMouseMove}
+          onMouseUp={onViewportMouseUp}
+          onMouseLeave={onViewportMouseUp}
+        >
+          <div
+            id="arbol-tree-content"
+            style={{
+              display: 'inline-block',
+              padding: '32px 24px',
+              transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+              transformOrigin: '0 0',
+              pointerEvents: dragging ? 'none' : undefined,
+            }}
+          >
+            {orientation === 'horizontal'
+              ? <HBranch node={root} gen={1} siblings={root.hermanos} sibsVisible={sibsVisible} onToggleSibs={handleToggleSibs} {...branchProps} />
+              : <VBranch node={root} gen={1} siblings={root.hermanos} sibsVisible={sibsVisible} onToggleSibs={handleToggleSibs} {...branchProps} />
+            }
           </div>
-          <div style={{ overflowX: 'auto', overflowY: 'auto', paddingBottom: 24 }}>
-            <div id="arbol-tree-content" style={{ display: 'inline-block', padding: '16px 8px' }}>
-              {orientation === 'horizontal'
-                ? <HBranch
-                    node={root} gen={1}
-                    siblings={root.hermanos}
-                    sibsVisible={sibsVisible}
-                    onToggleSibs={() => setSibsVisible(v => !v)}
-                    {...branchProps}
-                  />
-                : <VBranch
-                    node={root} gen={1}
-                    siblings={root.hermanos}
-                    sibsVisible={sibsVisible}
-                    onToggleSibs={() => setSibsVisible(v => !v)}
-                    {...branchProps}
-                  />
-              }
-            </div>
-          </div>
-        </>
+        </div>
       )}
 
       {showPdf && root && (
