@@ -141,22 +141,6 @@ function PersonSlot({ node, isRoot, excludeChildId, hidePareja, suppressChildExp
   );
 }
 
-// ─── Helper: compute expanded children of an ancestor node ───────────────────
-
-function getAncInfo(anc: AncestorNode, excludeId: number | undefined,
-  expandedIds: Set<number>, lazyData: Map<number, { pareja?: SiblingNode; hijos: SiblingNode[] }>,
-  loadingIds: Set<number>
-) {
-  const ancAsS = anc as unknown as SiblingNode;
-  const lazy = lazyData.get(anc.id);
-  const raw = lazy?.hijos ?? ancAsS.hijos ?? [];
-  const hijos = excludeId != null ? raw.filter(h => h.id !== excludeId) : raw;
-  const loaded = lazy != null || ancAsS.hijos != null;
-  const hasMore = hijos.length > 0 || (!loaded && (ancAsS.hasHijos ?? false));
-  const isExpanded = expandedIds.has(anc.id);
-  return { hijos: isExpanded ? hijos : [], loaded, hasMore, isExpanded, loading: loadingIds.has(anc.id) };
-}
-
 // ─── HBranch (horizontal mode: tree grows right, siblings stack above/below) ──
 
 function HBranch({ node, gen, siblings, excludeChildId, sibsVisible, onToggleSibs,
@@ -171,10 +155,6 @@ function HBranch({ node, gen, siblings, excludeChildId, sibsVisible, onToggleSib
   const hasSiblings = sibList.length > 0;
   const isMale = node.sexo !== 'F';
   const slotProps: SlotProps = { navigate, expandedIds, lazyData, loadingIds, onToggle };
-
-  // Children of each parent — shown at the SAME vertical level as that parent in the parents column
-  const padreInfo = padre ? getAncInfo(padre, node.id, expandedIds, lazyData, loadingIds) : null;
-  const madreInfo = madre ? getAncInfo(madre, node.id, expandedIds, lazyData, loadingIds) : null;
 
   // In horizontal mode siblings stack vertically (above for M, below for F)
   return (
@@ -228,54 +208,18 @@ function HBranch({ node, gen, siblings, excludeChildId, sibsVisible, onToggleSib
                 <div style={{ flex: 1, borderRight: '2px solid #d8d8d8' }} />
               )}
             </div>
-            {/* Parents column: each parent may have expanded children shown at the same row */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {padre && padreInfo && (
-                <>
-                  {/* Tíos of padre appear ABOVE padre's HBranch row */}
-                  {padreInfo.hijos.map(s => (
-                    <div key={s.id} style={{ display: 'flex', alignItems: 'center' }}>
-                      <div style={{ width: 8, height: 2, background: '#d8d8d8', flexShrink: 0 }} />
-                      <PersonSlot node={s} {...slotProps} />
-                    </div>
-                  ))}
-                  {padreInfo.hasMore && (
-                    <button
-                      onClick={() => onToggle(padre.id, padreInfo.loaded)}
-                      disabled={padreInfo.loading}
-                      style={{ ...sibToggleBtn, alignSelf: 'flex-start', marginLeft: 4 }}
-                    >
-                      {padreInfo.loading ? '…' : padreInfo.isExpanded ? '▼' : '▲'}
-                    </button>
-                  )}
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <div style={{ width: 8, height: 2, background: '#d8d8d8', flexShrink: 0 }} />
-                    <HBranch node={padre} gen={gen + 1} excludeChildId={node.id} {...slotProps} />
-                  </div>
-                </>
+              {padre && (
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{ width: 8, height: 2, background: '#d8d8d8', flexShrink: 0 }} />
+                  <HBranch node={padre} gen={gen + 1} excludeChildId={node.id} {...slotProps} />
+                </div>
               )}
-              {madre && madreInfo && (
-                <>
-                  {madreInfo.hijos.map(s => (
-                    <div key={s.id} style={{ display: 'flex', alignItems: 'center' }}>
-                      <div style={{ width: 8, height: 2, background: '#d8d8d8', flexShrink: 0 }} />
-                      <PersonSlot node={s} {...slotProps} />
-                    </div>
-                  ))}
-                  {madreInfo.hasMore && (
-                    <button
-                      onClick={() => onToggle(madre.id, madreInfo.loaded)}
-                      disabled={madreInfo.loading}
-                      style={{ ...sibToggleBtn, alignSelf: 'flex-start', marginLeft: 4 }}
-                    >
-                      {madreInfo.loading ? '…' : madreInfo.isExpanded ? '▼' : '▲'}
-                    </button>
-                  )}
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <div style={{ width: 8, height: 2, background: '#d8d8d8', flexShrink: 0 }} />
-                    <HBranch node={madre} gen={gen + 1} excludeChildId={node.id} {...slotProps} />
-                  </div>
-                </>
+              {madre && (
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{ width: 8, height: 2, background: '#d8d8d8', flexShrink: 0 }} />
+                  <HBranch node={madre} gen={gen + 1} excludeChildId={node.id} {...slotProps} />
+                </div>
               )}
             </div>
           </div>
@@ -297,79 +241,36 @@ function VBranch({ node, gen, siblings, excludeChildId, sibsVisible, onToggleSib
   const hasParents = !!(padre || madre);
   const sibList = siblings ?? [];
   const hasSiblings = sibList.length > 0;
+  const isMale = node.sexo !== 'F';
   const slotProps: SlotProps = { navigate, expandedIds, lazyData, loadingIds, onToggle };
-
-  // Children of each parent — shown at the SAME horizontal level as that parent in the hasParents row
-  // alignItems: flex-end in hasParents row means short tío columns align at the same bottom as the tall padre column
-  const padreInfo = padre ? getAncInfo(padre, node.id, expandedIds, lazyData, loadingIds) : null;
-  const madreInfo = madre ? getAncInfo(madre, node.id, expandedIds, lazyData, loadingIds) : null;
 
   // In vertical mode siblings go left (M) or right (F) of root card
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       {hasParents && (
         <>
-          {/* alignItems: flex-end → tío cards bottom-align with padre card (same generational level) */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', borderBottom: '2px solid #d8d8d8' }}>
-            {padre && padreInfo && (
-              <>
-                {/* Tíos of padre at the same row level as padre */}
-                {padreInfo.hijos.map(s => (
-                  <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <PersonSlot node={s} {...slotProps} />
-                    <div style={{ width: 2, height: 10, background: '#d8d8d8' }} />
-                  </div>
-                ))}
-                {/* Padre column with ▼ button on the connector (position: absolute → no layout shift) */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <VBranch node={padre} gen={gen + 1} excludeChildId={node.id} {...slotProps} />
-                  <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', width: 2, height: 10, background: '#d8d8d8' }}>
-                    {padreInfo.hasMore && (
-                      <button
-                        onClick={() => onToggle(padre.id, padreInfo.loaded)}
-                        disabled={padreInfo.loading}
-                        style={{ ...expandDownBtn, position: 'absolute', top: -13, background: '#fff', zIndex: 1 }}
-                      >
-                        {padreInfo.loading ? '…' : padreInfo.isExpanded ? '▲' : '▼'}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </>
+            {padre && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <VBranch node={padre} gen={gen + 1} excludeChildId={node.id} {...slotProps} />
+                <div style={{ width: 2, height: 10, background: '#d8d8d8' }} />
+              </div>
             )}
-            {madre && madreInfo && (
-              <>
-                {madreInfo.hijos.map(s => (
-                  <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <PersonSlot node={s} {...slotProps} />
-                    <div style={{ width: 2, height: 10, background: '#d8d8d8' }} />
-                  </div>
-                ))}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <VBranch node={madre} gen={gen + 1} excludeChildId={node.id} {...slotProps} />
-                  <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', width: 2, height: 10, background: '#d8d8d8' }}>
-                    {madreInfo.hasMore && (
-                      <button
-                        onClick={() => onToggle(madre.id, madreInfo.loaded)}
-                        disabled={madreInfo.loading}
-                        style={{ ...expandDownBtn, position: 'absolute', top: -13, background: '#fff', zIndex: 1 }}
-                      >
-                        {madreInfo.loading ? '…' : madreInfo.isExpanded ? '▲' : '▼'}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </>
+            {madre && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <VBranch node={madre} gen={gen + 1} excludeChildId={node.id} {...slotProps} />
+                <div style={{ width: 2, height: 10, background: '#d8d8d8' }} />
+              </div>
             )}
           </div>
           <div style={{ width: 2, height: 10, background: '#d8d8d8', flexShrink: 0 }} />
         </>
       )}
 
-      {/* Root row with optional siblings on sides (gen=1 only) */}
+      {/* Root row: siblings left(M)/right(F) + node card */}
       <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-        {/* Siblings left (gen=1, male) */}
-        {hasSiblings && sibsVisible && node.sexo !== 'F' && (
+        {/* Siblings left (male) */}
+        {hasSiblings && sibsVisible && isMale && (
           <>
             <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
               {sibList.map(s => <PersonSlot key={s.id} node={s} {...slotProps} />)}
@@ -377,7 +278,7 @@ function VBranch({ node, gen, siblings, excludeChildId, sibsVisible, onToggleSib
             <div style={{ width: 8, height: 2, background: '#d8d8d8', marginTop: 74 }} />
           </>
         )}
-        {hasSiblings && node.sexo !== 'F' && onToggleSibs && (
+        {hasSiblings && isMale && onToggleSibs && (
           <button onClick={onToggleSibs} style={{ ...sibToggleBtn, marginTop: 62 }} title={sibsVisible ? 'Ocultar hermanos' : 'Ver hermanos'}>
             {sibsVisible ? '▶' : '◀'}
           </button>
@@ -392,13 +293,13 @@ function VBranch({ node, gen, siblings, excludeChildId, sibsVisible, onToggleSib
           {...slotProps}
         />
 
-        {hasSiblings && node.sexo === 'F' && onToggleSibs && (
+        {hasSiblings && !isMale && onToggleSibs && (
           <button onClick={onToggleSibs} style={{ ...sibToggleBtn, marginTop: 62 }} title={sibsVisible ? 'Ocultar hermanos' : 'Ver hermanos'}>
             {sibsVisible ? '◀' : '▶'}
           </button>
         )}
-        {/* Siblings right (gen=1, female) */}
-        {hasSiblings && sibsVisible && node.sexo === 'F' && (
+        {/* Siblings right (female) */}
+        {hasSiblings && sibsVisible && !isMale && (
           <>
             <div style={{ width: 8, height: 2, background: '#d8d8d8', marginTop: 74 }} />
             <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
