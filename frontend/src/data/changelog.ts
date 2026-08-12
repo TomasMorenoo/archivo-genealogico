@@ -95,6 +95,23 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
+    id: 6,
+    label: 'Beta – Árbol v1.4',
+    channel: 'beta',
+    sections: [
+      {
+        title: 'Árbol genealógico',
+        items: [
+          'Zoom con la rueda del mouse (centrado en el cursor) y botones +/− en la barra.',
+          'Arrastrar el árbol con el mouse para desplazarte libremente, sin barras de scroll.',
+          'Botón ⌂ para restablecer la vista.',
+          'Al desplegar los hijos de abuelos o bisabuelos, aparecen al lado del padre — en la generación correcta, sin crear un nivel nuevo.',
+          'Al desplegar hermanos, la persona raíz ya no se desplaza.',
+        ],
+      },
+    ],
+  },
+  {
     id: 5,
     label: 'Beta – Árbol v1.3',
     channel: 'beta',
