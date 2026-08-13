@@ -81,13 +81,15 @@ type SlotProps = {
   lazyData: Map<number, { pareja?: SiblingNode; hijos: SiblingNode[] }>;
   loadingIds: Set<number>;
   onToggle: (id: number, hasPreloaded: boolean) => void;
+  sibsAncVisible: Set<number>;
+  onToggleSibsAnc: (id: number) => void;
 };
 
 // PersonSlot: renders one person card + their partner + expandable children
 // excludeChildId: child already shown in the ancestor chain — excluded from the hijos expand
 // hidePareja: suppress pareja display (ancestor nodes — partner is shown as a separate branch)
 // suppressChildExpand: don't show ▼ or expanded children (ancestor nodes handle it at branch level)
-function PersonSlot({ node, isRoot, excludeChildId, hidePareja, suppressChildExpand, navigate, expandedIds, lazyData, loadingIds, onToggle }: {
+function PersonSlot({ node, isRoot, excludeChildId, hidePareja, suppressChildExpand, navigate, expandedIds, lazyData, loadingIds, onToggle, sibsAncVisible, onToggleSibsAnc }: {
   node: SiblingNode; isRoot?: boolean; excludeChildId?: number; hidePareja?: boolean; suppressChildExpand?: boolean;
 } & SlotProps) {
   const lazy = lazyData.get(node.id);
@@ -131,6 +133,7 @@ function PersonSlot({ node, isRoot, excludeChildId, hidePareja, suppressChildExp
                   node={child} navigate={navigate}
                   expandedIds={expandedIds} lazyData={lazyData}
                   loadingIds={loadingIds} onToggle={onToggle}
+                  sibsAncVisible={sibsAncVisible} onToggleSibsAnc={onToggleSibsAnc}
                 />
               </div>
             ))}
@@ -144,7 +147,7 @@ function PersonSlot({ node, isRoot, excludeChildId, hidePareja, suppressChildExp
 // ─── HBranch (horizontal mode: tree grows right, siblings stack above/below) ──
 
 function HBranch({ node, gen, siblings, excludeChildId, sibsVisible, onToggleSibs,
-  navigate, expandedIds, lazyData, loadingIds, onToggle }: {
+  navigate, expandedIds, lazyData, loadingIds, onToggle, sibsAncVisible, onToggleSibsAnc }: {
   node: AncestorNode; gen: number; siblings?: SiblingNode[];
   excludeChildId?: number; sibsVisible?: boolean; onToggleSibs?: () => void;
 } & SlotProps) {
@@ -154,7 +157,7 @@ function HBranch({ node, gen, siblings, excludeChildId, sibsVisible, onToggleSib
   const sibList = siblings ?? [];
   const hasSiblings = sibList.length > 0;
   const isMale = node.sexo !== 'F';
-  const slotProps: SlotProps = { navigate, expandedIds, lazyData, loadingIds, onToggle };
+  const slotProps: SlotProps = { navigate, expandedIds, lazyData, loadingIds, onToggle, sibsAncVisible, onToggleSibsAnc };
 
   // In horizontal mode siblings stack vertically (above for M, below for F)
   return (
@@ -209,18 +212,52 @@ function HBranch({ node, gen, siblings, excludeChildId, sibsVisible, onToggleSib
               )}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {padre && (
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{ width: 8, height: 2, background: '#d8d8d8', flexShrink: 0 }} />
-                  <HBranch node={padre} gen={gen + 1} excludeChildId={node.id} {...slotProps} />
-                </div>
-              )}
-              {madre && (
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{ width: 8, height: 2, background: '#d8d8d8', flexShrink: 0 }} />
-                  <HBranch node={madre} gen={gen + 1} excludeChildId={node.id} {...slotProps} />
-                </div>
-              )}
+              {padre && (() => {
+                const tios = (padre.hijos ?? []).filter(h => h.id !== node.id);
+                const tiosVisible = sibsAncVisible.has(padre.id);
+                return (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <div style={{ width: 8, height: 2, background: '#d8d8d8', flexShrink: 0 }} />
+                      <HBranch node={padre} gen={gen + 1} excludeChildId={node.id} {...slotProps} />
+                      {tios.length > 0 && (
+                        <button onClick={() => onToggleSibsAnc(padre.id)} style={{ ...sibToggleBtn, marginLeft: 4 }}>
+                          {tiosVisible ? '▲' : '▼'}
+                        </button>
+                      )}
+                    </div>
+                    {tiosVisible && tios.map(s => (
+                      <div key={s.id} style={{ display: 'flex', alignItems: 'center' }}>
+                        <div style={{ width: 16, flexShrink: 0 }} />
+                        <PersonSlot node={s} {...slotProps} />
+                      </div>
+                    ))}
+                  </>
+                );
+              })()}
+              {madre && (() => {
+                const tios = (madre.hijos ?? []).filter(h => h.id !== node.id);
+                const tiosVisible = sibsAncVisible.has(madre.id);
+                return (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <div style={{ width: 8, height: 2, background: '#d8d8d8', flexShrink: 0 }} />
+                      <HBranch node={madre} gen={gen + 1} excludeChildId={node.id} {...slotProps} />
+                      {tios.length > 0 && (
+                        <button onClick={() => onToggleSibsAnc(madre.id)} style={{ ...sibToggleBtn, marginLeft: 4 }}>
+                          {tiosVisible ? '▲' : '▼'}
+                        </button>
+                      )}
+                    </div>
+                    {tiosVisible && tios.map(s => (
+                      <div key={s.id} style={{ display: 'flex', alignItems: 'center' }}>
+                        <div style={{ width: 16, flexShrink: 0 }} />
+                        <PersonSlot node={s} {...slotProps} />
+                      </div>
+                    ))}
+                  </>
+                );
+              })()}
             </div>
           </div>
         </>
@@ -232,7 +269,7 @@ function HBranch({ node, gen, siblings, excludeChildId, sibsVisible, onToggleSib
 // ─── VBranch (vertical mode: tree grows up, siblings go left/right) ──────────
 
 function VBranch({ node, gen, siblings, excludeChildId, sibsVisible, onToggleSibs,
-  navigate, expandedIds, lazyData, loadingIds, onToggle }: {
+  navigate, expandedIds, lazyData, loadingIds, onToggle, sibsAncVisible, onToggleSibsAnc }: {
   node: AncestorNode; gen: number; siblings?: SiblingNode[];
   excludeChildId?: number; sibsVisible?: boolean; onToggleSibs?: () => void;
 } & SlotProps) {
@@ -242,7 +279,7 @@ function VBranch({ node, gen, siblings, excludeChildId, sibsVisible, onToggleSib
   const sibList = siblings ?? [];
   const hasSiblings = sibList.length > 0;
   const isMale = node.sexo !== 'F';
-  const slotProps: SlotProps = { navigate, expandedIds, lazyData, loadingIds, onToggle };
+  const slotProps: SlotProps = { navigate, expandedIds, lazyData, loadingIds, onToggle, sibsAncVisible, onToggleSibsAnc };
 
   // In vertical mode siblings go left (M) or right (F) of root card
   return (
@@ -250,18 +287,52 @@ function VBranch({ node, gen, siblings, excludeChildId, sibsVisible, onToggleSib
       {hasParents && (
         <>
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', borderBottom: '2px solid #d8d8d8' }}>
-            {padre && (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <VBranch node={padre} gen={gen + 1} excludeChildId={node.id} {...slotProps} />
-                <div style={{ width: 2, height: 10, background: '#d8d8d8' }} />
-              </div>
-            )}
-            {madre && (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <VBranch node={madre} gen={gen + 1} excludeChildId={node.id} {...slotProps} />
-                <div style={{ width: 2, height: 10, background: '#d8d8d8' }} />
-              </div>
-            )}
+            {padre && (() => {
+              const tios = (padre.hijos ?? []).filter(h => h.id !== node.id);
+              const tiosVisible = sibsAncVisible.has(padre.id);
+              return (
+                <>
+                  {tiosVisible && tios.map(s => (
+                    <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <PersonSlot node={s} {...slotProps} />
+                      <div style={{ height: 10 }} />
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <VBranch node={padre} gen={gen + 1} excludeChildId={node.id} {...slotProps} />
+                    {tios.length > 0 && (
+                      <button onClick={() => onToggleSibsAnc(padre.id)} style={expandDownBtn}>
+                        {tiosVisible ? '▲' : '▼'}
+                      </button>
+                    )}
+                    <div style={{ width: 2, height: 10, background: '#d8d8d8' }} />
+                  </div>
+                </>
+              );
+            })()}
+            {madre && (() => {
+              const tios = (madre.hijos ?? []).filter(h => h.id !== node.id);
+              const tiosVisible = sibsAncVisible.has(madre.id);
+              return (
+                <>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <VBranch node={madre} gen={gen + 1} excludeChildId={node.id} {...slotProps} />
+                    {tios.length > 0 && (
+                      <button onClick={() => onToggleSibsAnc(madre.id)} style={expandDownBtn}>
+                        {tiosVisible ? '▲' : '▼'}
+                      </button>
+                    )}
+                    <div style={{ width: 2, height: 10, background: '#d8d8d8' }} />
+                  </div>
+                  {tiosVisible && tios.map(s => (
+                    <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <PersonSlot node={s} {...slotProps} />
+                      <div style={{ height: 10 }} />
+                    </div>
+                  ))}
+                </>
+              );
+            })()}
           </div>
           <div style={{ width: 2, height: 10, background: '#d8d8d8', flexShrink: 0 }} />
         </>
@@ -377,6 +448,7 @@ function PdfExportModal({ root, orientation, onClose }: {
   }
 
   const noopToggle = () => {};
+  const noopToggleAnc = (_id: number) => {};
   const emptySet = new Set<number>();
   const emptyMap = new Map<number, { pareja?: SiblingNode; hijos: SiblingNode[] }>();
 
@@ -463,9 +535,11 @@ function PdfExportModal({ root, orientation, onClose }: {
                   <div ref={treeRef}>
                     {orientation === 'horizontal'
                       ? <HBranch node={root} gen={1} navigate={() => {}} siblings={root.hermanos}
-                          expandedIds={emptySet} lazyData={emptyMap} loadingIds={emptySet} onToggle={noopToggle} />
+                          expandedIds={emptySet} lazyData={emptyMap} loadingIds={emptySet} onToggle={noopToggle}
+                          sibsAncVisible={emptySet} onToggleSibsAnc={noopToggleAnc} />
                       : <VBranch node={root} gen={1} navigate={() => {}} siblings={root.hermanos}
-                          expandedIds={emptySet} lazyData={emptyMap} loadingIds={emptySet} onToggle={noopToggle} />
+                          expandedIds={emptySet} lazyData={emptyMap} loadingIds={emptySet} onToggle={noopToggle}
+                          sibsAncVisible={emptySet} onToggleSibsAnc={noopToggleAnc} />
                     }
                   </div>
                 </div>
@@ -491,6 +565,7 @@ export default function ArbolPage() {
   const [showPdf, setShowPdf] = useState(false);
 
   const [sibsVisible, setSibsVisible] = useState(false);
+  const [sibsAncVisible, setSibsAncVisible] = useState<Set<number>>(new Set());
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [lazyData, setLazyData] = useState<Map<number, { pareja?: SiblingNode; hijos: SiblingNode[] }>>(new Map());
   const [loadingIds, setLoadingIds] = useState<Set<number>>(new Set());
@@ -573,6 +648,7 @@ export default function ArbolPage() {
     setExpandedIds(new Set());
     setLazyData(new Map());
     setSibsVisible(false);
+    setSibsAncVisible(new Set());
     setZoom(1);
     setPan({ x: 0, y: 0 });
     try {
@@ -631,12 +707,22 @@ export default function ArbolPage() {
     await configApi.set(CFG_ROOT_NAME, null);
   }
 
+  function handleToggleSibsAnc(id: number) {
+    setSibsAncVisible(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  }
+
   const branchProps: SlotProps = {
     navigate: goTo,
     expandedIds,
     lazyData,
     loadingIds,
     onToggle: handleToggle,
+    sibsAncVisible,
+    onToggleSibsAnc: handleToggleSibsAnc,
   };
 
   function handleToggleSibs() {

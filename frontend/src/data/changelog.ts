@@ -95,6 +95,20 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
+    id: 7,
+    label: 'Beta – Árbol v1.5',
+    channel: 'beta',
+    sections: [
+      {
+        title: 'Árbol genealógico',
+        items: [
+          'Tíos y tías: desplegá los hermanos de tus padres, abuelos y demás ancestros con el botón ▼ bajo cada nodo.',
+          'Los tíos expandidos muestran su pareja y permiten desplegar sus hijos (primos) con otro ▼.',
+        ],
+      },
+    ],
+  },
+  {
     id: 6,
     label: 'Beta – Árbol v1.4',
     channel: 'beta',
