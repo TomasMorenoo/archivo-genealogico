@@ -184,11 +184,19 @@ app.whenReady().then(async () => {
   const isDev = process.env.ELECTRON_DEV === 'true';
   if (!isDev) {
     autoUpdater.allowPrerelease = app.getVersion().includes('beta');
+    autoUpdater.on('update-available', (info) => {
+      dialog.showMessageBox({
+        type: 'info',
+        title: 'Actualización encontrada',
+        message: `Nueva versión disponible: ${info.version}\nDescargando en segundo plano...`,
+        buttons: ['OK'],
+      });
+    });
     autoUpdater.on('update-downloaded', () => {
       dialog.showMessageBox({
         type: 'info',
-        title: 'Actualización disponible',
-        message: 'Hay una nueva versión disponible. ¿Instalar ahora?',
+        title: 'Lista para instalar',
+        message: 'La actualización ya se descargó. ¿Instalás ahora?',
         buttons: ['Instalar y reiniciar', 'Después'],
       }).then(result => {
         if (result.response === 0) autoUpdater.quitAndInstall();
